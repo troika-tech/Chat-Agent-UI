@@ -1763,7 +1763,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
 
     thankName: (name) => `May I have your phone number to keep you updated?`,
 
-    confirmBoth: (name) => `Thank you, ${name}! How can I assist you today?.`,
+    confirmBoth: (name) => `Thank you, ${name}! Let me know how I can assist you further.`,
 
     confirmNameOnly: (name) => `Thank you, ${name}!`,
 
