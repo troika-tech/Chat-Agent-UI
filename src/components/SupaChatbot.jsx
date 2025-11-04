@@ -225,9 +225,27 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       // Clear the message origin tab after bot response
       setMessageOriginTab(null);
 
-      // ===== SMART USER COLLECTION: Ask for phone after bot responds =====
-      // If we just collected name from a query, ask for phone now
-      if (userCollectionState === 'ASKING_PHONE' && userName && !userPhone) {
+      // ===== SMART USER COLLECTION: Ask for phone after 3rd message =====
+      // Get current message count from localStorage (since state updates are async)
+      let currentMessageCount = userMessageCount;
+      if (sessionId && chatbotId) {
+        try {
+          const key = `supa_user_message_count:${chatbotId}:${sessionId}`;
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            currentMessageCount = parseInt(stored, 10);
+          }
+        } catch (error) {
+          // Fallback to state value
+        }
+      }
+      
+      // Ask for phone ONLY after the 3rd user message (if we have name but not phone)
+      if (currentMessageCount === 3 && userName && !userPhone) {
+        // Transition to ASKING_PHONE state if not already
+        if (userCollectionState !== 'ASKING_PHONE') {
+          setUserCollectionState('ASKING_PHONE');
+        }
         setTimeout(() => {
           const phonePrompt = {
             sender: "bot",
@@ -1743,7 +1761,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   const USER_COLLECTION_PROMPTS = {
     askName: "By the way, Can you please tell me your name?",
 
-    thankName: (name) => `Nice to meet you, ${name}! May I have your phone number to keep you updated?`,
+    thankName: (name) => `May I have your phone number to keep you updated?`,
 
     confirmBoth: (name) => `Thank you, ${name}! How can I assist you today?.`,
 
@@ -1796,12 +1814,13 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
           if (isQuery) {
             // User asked a question AND provided name - process query first
             // Fall through to send their question to backend
-            // We'll ask for phone after bot responds to their question
+            // Phone will be asked after 3rd message (handled in onComplete callback)
           } else {
-            // Just provided name - ask for phone
+            // Just provided name - acknowledge but don't ask for phone yet
+            // Phone will be asked after 3rd message (handled in onComplete callback)
             const botMessage = {
               sender: "bot",
-              text: USER_COLLECTION_PROMPTS.thankName(nameResult.name),
+              text: `Nice to meet you, ${nameResult.name}! How can I help you?`,
               timestamp: new Date()
             };
             addMessageToTab(currentTab, botMessage);
@@ -1871,8 +1890,12 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
 
       // ===== END USER COLLECTION FLOW =====
 
-      // Handle INITIAL state - trigger collection after first message
+      // Handle INITIAL state - trigger collection after 1st message (ask for name)
       if (userCollectionState === 'INITIAL') {
+        // Calculate new count before incrementing (since state updates are async)
+        const newMessageCount = userMessageCount + 1;
+        const willAskForName = newMessageCount === 1; // Ask for name after 1st message
+        
         // Increment user message count
         incrementUserMessageCount();
 
@@ -1897,7 +1920,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         setMessage("");
         setIsTyping(true);
 
-        // Send the message to backend (so bot can respond to the first message)
+        // Send the message to backend
         try {
           if (!apiBase) {
             throw new Error('API Base URL is not defined');
@@ -1916,16 +1939,18 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
             email: null
           });
 
-          // After bot responds, ask for name
-          setTimeout(() => {
-            const botMessage = {
-              sender: "bot",
-              text: USER_COLLECTION_PROMPTS.askName,
-              timestamp: new Date()
-            };
-            addMessageToTab(currentTab, botMessage);
-            setUserCollectionState('ASKING_NAME');
-          }, 500);
+          // After bot responds, ask for name if this is the 1st message
+          if (willAskForName) {
+            setTimeout(() => {
+              const botMessage = {
+                sender: "bot",
+                text: USER_COLLECTION_PROMPTS.askName,
+                timestamp: new Date()
+              };
+              addMessageToTab(currentTab, botMessage);
+              setUserCollectionState('ASKING_NAME');
+            }, 500);
+          }
 
           return;
         } catch (error) {
