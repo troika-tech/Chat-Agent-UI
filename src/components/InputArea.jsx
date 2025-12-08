@@ -1,0 +1,1275 @@
+import React, { useState, useRef, useEffect } from "react";
+import styled from "styled-components";
+import { FiArrowUp, FiMic, FiSquare, FiSend } from "react-icons/fi";
+import { IoSend } from "react-icons/io5";
+import { useTheme } from "../contexts/ThemeContext";
+import ServiceSuggestions from "./ServiceSuggestions";
+import AutoSuggestions from "./AutoSuggestions";
+
+const InputContainer = styled.div`
+  flex-shrink: 0;
+  padding: clamp(1rem, 2.5vw, 1.5rem) clamp(1.5rem, 3vw, 2rem) clamp(1rem, 2.5vw, 1.5rem) clamp(1.5rem, 3vw, 2rem);
+  border-top: ${props => props.$isWelcomeMode ? 'none' : `1px solid ${props.$isDarkMode ? '#404040' : '#e5e7eb'}`};
+  background: ${props => props.$isDarkMode ? '#000000' : '#ffffff'};
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: all 0.3s ease;
+  z-index: 10;
+  margin-top: 0;
+  min-height: clamp(120px, 10vw, 140px);
+  overflow: visible;
+  
+  /* Prevent horizontal scroll */
+  overflow-x: hidden;
+  
+  /* Force visibility in production */
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: flex !important;
+  
+  /* Background styling */
+  background: ${props => props.$isWelcomeMode ? 'transparent' : props.$isDarkMode ? 'rgba(0, 0, 0, 0.95)' : 'rgba(255, 255, 255, 0.95)'} !important;
+  
+  /* Conditional positioning based on welcome mode */
+  ${props => props.$isWelcomeMode ? `
+    /* Welcome mode: natural flow, not absolute */
+    position: relative !important;
+    margin-top: 0.5rem;
+    max-width: min(100%, 1100px);
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  ` : `
+    /* Chat mode: sticky at bottom */
+    position: sticky !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+  `}
+
+  /* Mobile responsive styling with fluid units */
+  @media (max-width: 768px) {
+    padding: clamp(0.75rem, 1.5vw, 1rem) clamp(1rem, 2vw, 1.5rem) clamp(1rem, 2vw, 1.5rem) clamp(1rem, 2vw, 1.5rem);
+    background: ${props => props.$isWelcomeMode ? 'transparent' : props.$isDarkMode ? 'rgba(0, 0, 0, 0.95)' : 'rgba(255, 255, 255, 0.95)'} !important;
+    min-height: clamp(85px, 7vw, 95px);
+  }
+
+  @media (max-width: 480px) {
+    padding: clamp(0.6rem, 1.25vw, 0.75rem) clamp(0.75rem, 1.5vw, 1rem) clamp(0.75rem, 1.5vw, 1rem) clamp(0.75rem, 1.5vw, 1rem);
+    background: ${props => props.$isWelcomeMode ? 'transparent' : props.$isDarkMode ? 'rgba(0, 0, 0, 0.95)' : 'rgba(255, 255, 255, 0.95)'} !important;
+    min-height: clamp(80px, 6vw, 90px);
+  }
+
+  @media (max-width: 360px) {
+    padding: clamp(0.5rem, 1vw, 0.6rem) clamp(0.6rem, 1.25vw, 0.75rem) clamp(0.6rem, 1.25vw, 0.75rem) clamp(0.6rem, 1.25vw, 0.75rem);
+    background: ${props => props.$isWelcomeMode ? 'transparent' : props.$isDarkMode ? 'rgba(0, 0, 0, 0.95)' : 'rgba(255, 255, 255, 0.95)'} !important;
+    min-height: clamp(75px, 5vw, 85px);
+  }
+  
+  /* Landscape mode */
+  @media (orientation: landscape) and (max-height: 500px) {
+    padding: clamp(0.5rem, 1vh, 0.6rem) clamp(0.75rem, 2vw, 1rem);
+    min-height: clamp(70px, 6vh, 80px);
+  }
+`;
+
+const ChatInput = styled.input`
+  padding: clamp(1.25rem, 2vw, 1.5rem) clamp(4rem, 10vw, 4.5rem) clamp(1.25rem, 2vw, 1.5rem) clamp(1.5rem, 2.5vw, 2rem);
+  border: 2px solid ${props => props.$isDarkMode ? '#3f3f46' : '#e5e7eb'};
+  border-radius: clamp(16px, 2.5vw, 20px);
+  font-size: clamp(1.125rem, 2vw, 1.25rem);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #ffffff;
+  color: ${props => props.$isDarkMode ? '#ffffff' : '#1f2937'};
+  line-height: clamp(1.4, 0.1vw + 1.3, 1.5);
+  font-weight: 400;
+  
+  /* Prevent horizontal scroll */
+  overflow-x: hidden;
+  box-shadow: ${props => props.$isDarkMode 
+    ? '0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2)' 
+    : '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)'};
+
+  /* Force visibility in all modes */
+  &::placeholder {
+    color: ${props => props.$isDarkMode ? '#a1a1aa' : '#9ca3af'};
+    font-weight: 400;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  &:hover {
+    border-color: ${props => props.$isDarkMode ? '#52525b' : '#d1d5db'};
+    box-shadow: ${props => props.$isDarkMode 
+      ? '0 2px 4px rgba(0, 0, 0, 0.4), 0 2px 3px rgba(0, 0, 0, 0.3)' 
+      : '0 2px 4px rgba(0, 0, 0, 0.1), 0 2px 3px rgba(0, 0, 0, 0.06)'};
+  }
+
+  &:focus {
+    border-color: ${props => props.$isDarkMode ? '#52525b' : '#d1d5db'};
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.05), 
+                ${props => props.$isDarkMode 
+                  ? '0 4px 6px rgba(0, 0, 0, 0.4)' 
+                  : '0 4px 6px rgba(0, 0, 0, 0.1)'};
+    background: #ffffff;
+    color: ${props => props.$isDarkMode ? '#ffffff' : '#1f2937'};
+    transform: translateY(-1px);
+  }
+
+  /* Enhanced mobile responsiveness - Better mobile input layout with improved font scaling */
+  @media (max-width: 1200px) {
+    padding: 1.04rem 161px 1.04rem 1.04rem; /* Increased by 15% from 0.9rem 140px 0.9rem 0.9rem */
+    font-size: 1.25rem; /* Increased from 1.13rem for better readability */
+    border-radius: 28px; /* Increased by 15% from 24px */
+    line-height: 1.38;
+  }
+
+  @media (max-width: 1024px) {
+    padding: 0.98rem 155px 0.98rem 0.92rem; /* Increased by 15% from 0.85rem 135px 0.85rem 0.8rem */
+    font-size: 1.2rem; /* Increased from 1.1rem for improved readability */
+    border-radius: 26px; /* Increased by 15% from 23px */
+    line-height: 1.36;
+  }
+
+  @media (max-width: 900px) {
+    padding: 0.92rem 150px 0.92rem 0.86rem; /* Increased by 15% from 0.8rem 130px 0.8rem 0.75rem */
+    font-size: 1.15rem; /* Increased from 1.08rem for better mobile readability */
+    border-radius: 25px; /* Increased by 15% from 22px */
+    line-height: 1.34;
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.75rem 144px 0.75rem 1rem; /* Reduced vertical padding */
+    font-size: 1.1rem; /* Increased from 1.06rem for maintained readability on tablets */
+    border-radius: 24px; /* Increased by 15% from 21px */
+    line-height: 1.32;
+  }
+
+  @media (max-width: 640px) {
+    padding: 0.8rem 138px 0.8rem 1.1rem; /* Reduced vertical padding */
+    font-size: 1.08rem; /* Increased from 1.04rem for good mobile readability */
+    border-radius: 22px; /* Increased by 15% from 19px */
+    line-height: 1.3;
+  }
+
+  @media (max-width: 600px) {
+    padding: 0.9rem 132px 0.9rem 1.2rem; /* Reduced vertical padding */
+    font-size: 1.05rem; /* Increased from 1.01rem for optimized small screens */
+    border-radius: 21px; /* Increased by 15% from 18px */
+    line-height: 1.28;
+  }
+
+  @media (max-width: 480px) {
+    padding: 1rem 127px 1rem 1.3rem; /* Reduced vertical padding */
+    font-size: 1.08rem; /* Increased from 1.06rem for better mobile readability */
+    border-radius: 20px; /* Increased by 15% from 17px */
+    line-height: 1.26;
+  }
+
+  @media (max-width: 414px) {
+    padding: 1.1rem 121px 1.1rem 1.4rem; /* Reduced vertical padding */
+    font-size: 1.06rem; /* Increased from 1.04rem for iPhone readability */
+    border-radius: 18px; /* Increased by 15% from 16px */
+    line-height: 1.24;
+  }
+
+  @media (max-width: 390px) {
+    padding: 1.2rem 115px 1.2rem 1.5rem; /* Reduced vertical padding */
+    font-size: 1.03rem; /* Increased from 1.01rem for small phone optimization */
+    border-radius: 17px; /* Increased by 15% from 15px */
+    line-height: 1.22;
+  }
+
+  @media (max-width: 375px) {
+    padding: 1.3rem 109px 1.3rem 1.6rem; /* Reduced vertical padding */
+    font-size: 1.01rem; /* Increased from 0.99rem for iPhone SE readability */
+    border-radius: 16px; /* Increased by 15% from 14px */
+    line-height: 1.2;
+  }
+
+  @media (max-width: 360px) {
+    padding: 1.4rem 104px 1.4rem 1.7rem; /* Reduced vertical padding */
+    font-size: 0.99rem; /* Increased from 0.97rem for very small screens */
+    border-radius: 15px; /* Increased by 15% from 13px */
+    line-height: 1.18;
+  }
+
+  @media (max-width: 320px) {
+    padding: 1.5rem 98px 1.5rem 1.8rem; /* Reduced vertical padding */
+    font-size: 0.96rem; /* Increased from 0.94rem for minimum readable size */
+    border-radius: 14px; /* Increased by 15% from 12px */
+    line-height: 1.16;
+  }
+`;
+
+const InputWrapper = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: ${(props) => props.$isWelcomeMode ? "min(100%, 700px)" : "min(100%, 900px)"};
+  overflow: visible;
+  
+  /* Responsive max-width */
+  @media (max-width: 768px) {
+    max-width: ${(props) => props.$isWelcomeMode ? "100%" : "100%"};
+  }
+`;
+
+const InputButtons = styled.div`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  /* Enhanced mobile responsiveness - Comprehensive breakpoints */
+  @media (max-width: 1200px) {
+    right: 8px;
+    gap: 6px;
+  }
+
+  @media (max-width: 1024px) {
+    right: 8px;
+    gap: 6px;
+  }
+
+  @media (max-width: 900px) {
+    right: 8px;
+    gap: 6px;
+  }
+
+  @media (max-width: 768px) {
+    right: 8px;
+    gap: 5px;
+  }
+
+  @media (max-width: 640px) {
+    right: 8px;
+    gap: 5px;
+  }
+
+  @media (max-width: 600px) {
+    right: 8px;
+    gap: 5px;
+  }
+
+  @media (max-width: 480px) {
+    right: 8px;
+    gap: 4px;
+  }
+
+  @media (max-width: 414px) {
+    right: 8px;
+    gap: 4px;
+  }
+
+  @media (max-width: 390px) {
+    right: 8px;
+    gap: 4px;
+  }
+
+  @media (max-width: 375px) {
+    right: 8px;
+    gap: 4px;
+  }
+
+  @media (max-width: 360px) {
+    right: 8px;
+    gap: 4px;
+  }
+
+  @media (max-width: 320px) {
+    right: 8px;
+    gap: 4px;
+  }
+`;
+
+const ActionButton = styled.button`
+  background: ${props => props.$variant === 'primary' ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #ec4899 100%)' : 'transparent'};
+  border: ${props => props.$variant === 'primary' ? 'none' : 'none'};
+  border-radius: clamp(14px, 2.5vw, 18px);
+  width: clamp(48px, 5vw, 52px);
+  height: clamp(48px, 5vw, 52px);
+  min-width: clamp(48px, 5vw, 52px);
+  min-height: clamp(48px, 5vw, 52px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: ${props => props.$variant === 'primary' ? 'white' : '#6b7280'};
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  padding: 0;
+  box-shadow: none;
+  
+  /* Touch-friendly on mobile */
+  @media (max-width: 768px) {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: none;
+    background: ${props => props.$variant === 'primary'
+      ? '#000000'
+      : 'transparent'};
+  }
+
+  &:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  svg {
+    font-size: clamp(20px, 3vw, 24px);
+    width: clamp(20px, 3vw, 24px);
+    height: clamp(20px, 3vw, 24px);
+  }
+
+  /* Responsive design with fluid units */
+  @media (max-width: 1024px) {
+    width: clamp(40px, 4vw, 42px);
+    height: clamp(40px, 4vw, 42px);
+    min-width: clamp(40px, 4vw, 42px);
+    min-height: clamp(40px, 4vw, 42px);
+    svg {
+      font-size: clamp(19px, 2.5vw, 21px);
+      width: clamp(19px, 2.5vw, 21px);
+      height: clamp(19px, 2.5vw, 21px);
+    }
+  }
+
+  @media (max-width: 768px) {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    svg {
+      font-size: clamp(18px, 2.5vw, 20px);
+      width: clamp(18px, 2.5vw, 20px);
+      height: clamp(18px, 2.5vw, 20px);
+    }
+  }
+  
+  @media (max-width: 480px) {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    svg {
+      font-size: clamp(16px, 2vw, 18px);
+      width: clamp(16px, 2vw, 18px);
+      height: clamp(16px, 2vw, 18px);
+    }
+  }
+`;
+
+const SendButton = styled.button`
+  background: #000000;
+  border: none;
+  border-radius: clamp(14px, 2.5vw, 18px);
+  width: clamp(40px, 4vw, 44px);
+  height: clamp(40px, 4vw, 44px);
+  min-width: clamp(40px, 4vw, 44px);
+  min-height: clamp(40px, 4vw, 44px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
+  
+  /* Touch-friendly on mobile */
+  @media (max-width: 768px) {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  svg {
+    color: inherit;
+    flex-shrink: 0;
+    font-size: clamp(16px, 2.5vw, 18px);
+    width: clamp(14px, 2vw, 16px);
+    height: clamp(14px, 2vw, 16px);
+    font-weight: 900;
+    stroke-width: 3;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.05);
+    background: #1a1a1a;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), 0 3px 6px rgba(0, 0, 0, 0.25);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    background: #6b7280;
+    box-shadow: none;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+  }
+
+  /* Enhanced mobile responsiveness - Better touch targets */
+  @media (max-width: 1024px) {
+    width: 44px; /* Increased by 15% from 38px */
+    height: 44px; /* Increased by 15% from 38px */
+    min-width: 44px; /* Increased by 15% from 38px */
+    min-height: 44px; /* Increased by 15% from 38px */
+    max-width: 44px; /* Increased by 15% from 38px */
+    max-height: 44px; /* Increased by 15% from 38px */
+
+    svg {
+      font-size: 21px; /* Increased by 15% from 18px */
+      width: 21px; /* Increased by 15% from 18px */
+      height: 21px; /* Increased by 15% from 18px */
+    }
+  }
+
+  @media (max-width: 768px) {
+    width: 41px; /* Increased by 15% from 36px */
+    height: 41px; /* Increased by 15% from 36px */
+    min-width: 41px; /* Increased by 15% from 36px */
+    min-height: 41px; /* Increased by 15% from 36px */
+    max-width: 41px; /* Increased by 15% from 36px */
+    max-height: 41px; /* Increased by 15% from 36px */
+
+    svg {
+      font-size: 20px; /* Increased by 15% from 17px */
+      width: 20px; /* Increased by 15% from 17px */
+      height: 20px; /* Increased by 15% from 17px */
+    }
+  }
+
+  @media (max-width: 640px) {
+    width: 39px; /* Increased by 15% from 34px */
+    height: 39px; /* Increased by 15% from 34px */
+    min-width: 39px; /* Increased by 15% from 34px */
+    min-height: 39px; /* Increased by 15% from 34px */
+    max-width: 39px; /* Increased by 15% from 34px */
+    max-height: 39px; /* Increased by 15% from 34px */
+
+    svg {
+      font-size: 18px; /* Increased by 15% from 16px */
+      width: 18px; /* Increased by 15% from 16px */
+      height: 18px; /* Increased by 15% from 16px */
+    }
+  }
+
+  @media (max-width: 600px) {
+    width: 40px; /* Increased by 15% from 32px */
+    height: 40px; /* Increased by 15% from 32px */
+    min-width: 40px; /* Increased by 15% from 32px */
+    min-height: 40px; /* Increased by 15% from 32px */
+    max-width: 40px; /* Increased by 15% from 32px */
+    max-height: 40px; /* Increased by 15% from 32px */
+
+    svg {
+      font-size: 17px; /* Increased by 15% from 15px */
+      width: 17px; /* Increased by 15% from 15px */
+      height: 17px; /* Increased by 15% from 15px */
+    }
+  }
+
+  @media (max-width: 480px) {
+    width: 40px; /* Increased by 15% from 30px */
+    height: 40px; /* Increased by 15% from 30px */
+    min-width: 40px; /* Increased by 15% from 30px */
+    min-height: 40px; /* Increased by 15% from 30px */
+    max-width: 40px; /* Increased by 15% from 30px */
+    max-height: 40px; /* Increased by 15% from 30px */
+
+    svg {
+      font-size: 16px; /* Increased by 15% from 14px */
+      width: 16px; /* Increased by 15% from 14px */
+      height: 16px; /* Increased by 15% from 14px */
+    }
+  }
+
+  @media (max-width: 414px) {
+    width: 40px; /* Increased by 15% from 28px */
+    height: 40px; /* Increased by 15% from 28px */
+    min-width: 40px; /* Increased by 15% from 28px */
+    min-height: 40px; /* Increased by 15% from 28px */
+    max-width: 40px; /* Increased by 15% from 28px */
+    max-height: 40px; /* Increased by 15% from 28px */
+
+    svg {
+      font-size: 15px; /* Increased by 15% from 13px */
+      width: 15px; /* Increased by 15% from 13px */
+      height: 15px; /* Increased by 15% from 13px */
+    }
+  }
+
+  @media (max-width: 390px) {
+    width: 40px; /* Increased by 15% from 26px */
+    height: 40px; /* Increased by 15% from 26px */
+    min-width: 40px; /* Increased by 15% from 26px */
+    min-height: 40px; /* Increased by 15% from 26px */
+    max-width: 40px; /* Increased by 15% from 26px */
+    max-height: 40px; /* Increased by 15% from 26px */
+
+    svg {
+      font-size: 14px; /* Increased by 15% from 12px */
+      width: 14px; /* Increased by 15% from 12px */
+      height: 14px; /* Increased by 15% from 12px */
+    }
+  }
+
+  @media (max-width: 375px) {
+    width: 28px; /* Increased by 15% from 24px */
+    height: 28px; /* Increased by 15% from 24px */
+    min-width: 28px; /* Increased by 15% from 24px */
+    min-height: 28px; /* Increased by 15% from 24px */
+    max-width: 28px; /* Increased by 15% from 24px */
+    max-height: 28px; /* Increased by 15% from 24px */
+
+    svg {
+      font-size: 13px; /* Increased by 15% from 11px */
+      width: 13px; /* Increased by 15% from 11px */
+      height: 13px; /* Increased by 15% from 11px */
+    }
+  }
+
+  @media (max-width: 360px) {
+    width: 40px; /* Increased by 15% from 22px */
+    height: 40px; /* Increased by 15% from 22px */
+    min-width: 40px; /* Increased by 15% from 22px */
+    min-height: 40px; /* Increased by 15% from 22px */
+    max-width: 40px; /* Increased by 15% from 22px */
+    max-height: 40px; /* Increased by 15% from 22px */
+
+    svg {
+      font-size: 12px; /* Increased by 15% from 10px */
+      width: 12px; /* Increased by 15% from 10px */
+      height: 12px; /* Increased by 15% from 10px */
+    }
+  }
+
+  @media (max-width: 320px) {
+    width: 23px; /* Increased by 15% from 20px */
+    height: 23px; /* Increased by 15% from 20px */
+    min-width: 23px; /* Increased by 15% from 20px */
+    min-height: 23px; /* Increased by 15% from 20px */
+    max-width: 23px; /* Increased by 15% from 20px */
+    max-height: 23px; /* Increased by 15% from 20px */
+
+    svg {
+      font-size: 10px; /* Increased by 15% from 9px */
+      width: 10px; /* Increased by 15% from 9px */
+      height: 10px; /* Increased by 15% from 9px */
+    }
+  }
+`;
+
+const MuteButton = styled.button`
+  background: ${props => props.$isMuted ? 'rgba(255, 107, 157, 0.1)' : 'transparent'};
+  border: none;
+  border-radius: 50%;
+  width: 37px; /* Increased by 15% from 32px */
+  height: 37px; /* Increased by 15% from 32px */
+  min-width: 37px; /* Increased by 15% from 32px */
+  min-height: 37px; /* Increased by 15% from 32px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: ${props => props.$isMuted ? '#ff6b9d' : '#ff6b9d'};
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 9999;
+  transform: scale(1);
+
+  svg {
+    color: inherit;
+    flex-shrink: 0;
+    font-size: 23px; /* Increased by 15% from 20px */
+  }
+
+  &:hover:not(:disabled) {
+    transform: scale(1.1);
+    color: ${props => props.$isDarkMode ? '#ffffff' : '#1f2937'};
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+    background-color: rgba(255, 107, 157, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  /* Enhanced mobile responsiveness - Better touch targets */
+  @media (max-width: 1024px) {
+    width: 39px; /* Increased by 15% from 34px */
+    height: 39px; /* Increased by 15% from 34px */
+    min-width: 39px; /* Increased by 15% from 34px */
+    min-height: 39px; /* Increased by 15% from 34px */
+
+    svg {
+      font-size: 23px; /* Increased by 15% from 20px */
+    }
+  }
+
+  @media (max-width: 768px) {
+    width: 37px; /* Increased by 15% from 32px */
+    height: 37px; /* Increased by 15% from 32px */
+    min-width: 37px; /* Increased by 15% from 32px */
+    min-height: 37px; /* Increased by 15% from 32px */
+
+    svg {
+      font-size: 22px; /* Increased by 15% from 19px */
+    }
+  }
+
+  @media (max-width: 640px) {
+    width: 35px; /* Increased by 15% from 30px */
+    height: 35px; /* Increased by 15% from 30px */
+    min-width: 35px; /* Increased by 15% from 30px */
+    min-height: 35px; /* Increased by 15% from 30px */
+
+    svg {
+      font-size: 21px; /* Increased by 15% from 18px */
+    }
+  }
+
+  @media (max-width: 600px) {
+    width: 40px; /* Increased by 15% from 28px */
+    height: 40px; /* Increased by 15% from 28px */
+    min-width: 40px; /* Increased by 15% from 28px */
+    min-height: 40px; /* Increased by 15% from 28px */
+
+    svg {
+      font-size: 20px; /* Increased by 15% from 17px */
+    }
+  }
+
+  @media (max-width: 480px) {
+    width: 40px; /* Increased by 15% from 26px */
+    height: 40px; /* Increased by 15% from 26px */
+    min-width: 40px; /* Increased by 15% from 26px */
+    min-height: 40px; /* Increased by 15% from 26px */
+
+    svg {
+      font-size: 18px; /* Increased by 15% from 16px */
+    }
+  }
+
+  @media (max-width: 414px) {
+    width: 40px; /* Increased by 15% from 24px */
+    height: 40px; /* Increased by 15% from 24px */
+    min-width: 40px; /* Increased by 15% from 24px */
+    min-height: 40px; /* Increased by 15% from 24px */
+
+    svg {
+      font-size: 17px; /* Increased by 15% from 15px */
+    }
+  }
+
+  @media (max-width: 390px) {
+    width: 25px; /* Increased by 15% from 22px */
+    height: 25px; /* Increased by 15% from 22px */
+    min-width: 25px; /* Increased by 15% from 22px */
+    min-height: 25px; /* Increased by 15% from 22px */
+
+    svg {
+      font-size: 16px; /* Increased by 15% from 14px */
+    }
+  }
+
+  @media (max-width: 375px) {
+    width: 23px; /* Increased by 15% from 20px */
+    height: 23px; /* Increased by 15% from 20px */
+    min-width: 23px; /* Increased by 15% from 20px */
+    min-height: 23px; /* Increased by 15% from 20px */
+
+    svg {
+      font-size: 15px; /* Increased by 15% from 13px */
+    }
+  }
+
+  @media (max-width: 360px) {
+    width: 21px; /* Increased by 15% from 18px */
+    height: 21px; /* Increased by 15% from 18px */
+    min-width: 21px; /* Increased by 15% from 18px */
+    min-height: 21px; /* Increased by 15% from 18px */
+
+    svg {
+      font-size: 14px; /* Increased by 15% from 12px */
+    }
+  }
+
+  @media (max-width: 320px) {
+    width: 18px; /* Increased by 15% from 16px */
+    height: 18px; /* Increased by 15% from 16px */
+    min-width: 18px; /* Increased by 15% from 16px */
+    min-height: 18px; /* Increased by 15% from 16px */
+
+    svg {
+      font-size: 13px; /* Increased by 15% from 11px */
+    }
+  }
+`;
+
+const VoiceButton = styled.button`
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  width: 37px; /* Increased by 15% from 32px */
+  height: 37px; /* Increased by 15% from 32px */
+  min-width: 37px; /* Increased by 15% from 32px */
+  min-height: 37px; /* Increased by 15% from 32px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: ${(props) => (props.$isRecording ? "#ef4444" : "#ff6b9d")};
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 9999;
+  transform: ${(props) => (props.$isRecording ? "scale(1.1)" : "scale(1)")};
+
+  /* Add pulsing animation when recording */
+  ${(props) =>
+    props.$isRecording &&
+    `
+      animation: pulse 1s infinite;
+    `}
+
+  @keyframes pulse {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  svg {
+    color: inherit;
+    flex-shrink: 0;
+    font-size: 23px; /* Increased by 15% from 20px */
+  }
+
+  &:hover:not(:disabled) {
+    transform: ${(props) => (props.$isRecording ? "scale(1.2)" : "scale(1.1)")};
+    color: ${(props) => (props.$isRecording ? "#dc2626" : (props.$isDarkMode ? '#ffffff' : '#1f2937'))};
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+
+  /* Enhanced mobile responsiveness - Better touch targets */
+  @media (max-width: 1024px) {
+    width: 39px; /* Increased by 15% from 34px */
+    height: 39px; /* Increased by 15% from 34px */
+    min-width: 39px; /* Increased by 15% from 34px */
+    min-height: 39px; /* Increased by 15% from 34px */
+
+    svg {
+      font-size: 23px; /* Increased by 15% from 20px */
+    }
+  }
+
+  @media (max-width: 768px) {
+    width: 37px; /* Increased by 15% from 32px */
+    height: 37px; /* Increased by 15% from 32px */
+    min-width: 37px; /* Increased by 15% from 32px */
+    min-height: 37px; /* Increased by 15% from 32px */
+
+    svg {
+      font-size: 22px; /* Increased by 15% from 19px */
+    }
+  }
+
+  @media (max-width: 640px) {
+    width: 35px; /* Increased by 15% from 30px */
+    height: 35px; /* Increased by 15% from 30px */
+    min-width: 35px; /* Increased by 15% from 30px */
+    min-height: 35px; /* Increased by 15% from 30px */
+
+    svg {
+      font-size: 21px; /* Increased by 15% from 18px */
+    }
+  }
+
+  @media (max-width: 600px) {
+    width: 32px; /* Increased by 15% from 28px */
+    height: 32px; /* Increased by 15% from 28px */
+    min-width: 32px; /* Increased by 15% from 28px */
+    min-height: 32px; /* Increased by 15% from 28px */
+
+    svg {
+      font-size: 20px; /* Increased by 15% from 17px */
+    }
+  }
+
+  @media (max-width: 480px) {
+    width: 30px; /* Increased by 15% from 26px */
+    height: 30px; /* Increased by 15% from 26px */
+    min-width: 30px; /* Increased by 15% from 26px */
+    min-height: 30px; /* Increased by 15% from 26px */
+
+    svg {
+      font-size: 18px; /* Increased by 15% from 16px */
+    }
+  }
+
+  @media (max-width: 414px) {
+    width: 28px; /* Increased by 15% from 24px */
+    height: 28px; /* Increased by 15% from 24px */
+    min-width: 28px; /* Increased by 15% from 24px */
+    min-height: 28px; /* Increased by 15% from 24px */
+
+    svg {
+      font-size: 17px; /* Increased by 15% from 15px */
+    }
+  }
+
+  @media (max-width: 390px) {
+    width: 25px; /* Increased by 15% from 22px */
+    height: 25px; /* Increased by 15% from 22px */
+    min-width: 25px; /* Increased by 15% from 22px */
+    min-height: 25px; /* Increased by 15% from 22px */
+
+    svg {
+      font-size: 16px; /* Increased by 15% from 14px */
+    }
+  }
+
+  @media (max-width: 375px) {
+    width: 23px; /* Increased by 15% from 20px */
+    height: 23px; /* Increased by 15% from 20px */
+    min-width: 23px; /* Increased by 15% from 20px */
+    min-height: 23px; /* Increased by 15% from 20px */
+
+    svg {
+      font-size: 15px; /* Increased by 15% from 13px */
+    }
+  }
+
+  @media (max-width: 360px) {
+    width: 21px; /* Increased by 15% from 18px */
+    height: 21px; /* Increased by 15% from 18px */
+    min-width: 21px; /* Increased by 15% from 18px */
+    min-height: 21px; /* Increased by 15% from 18px */
+
+    svg {
+      font-size: 14px; /* Increased by 15% from 12px */
+    }
+  }
+
+  @media (max-width: 320px) {
+    width: 18px; /* Increased by 15% from 16px */
+    height: 18px; /* Increased by 15% from 16px */
+    min-width: 18px; /* Increased by 15% from 16px */
+    min-height: 18px; /* Increased by 15% from 16px */
+
+    svg {
+      font-size: 13px; /* Increased by 15% from 11px */
+    }
+  }
+`;
+
+const InputArea = ({
+  message,
+  setMessage,
+  handleKeyPress,
+  isTyping,
+  userMessageCount,
+  verified,
+  needsAuth,
+  isRecording,
+  handleMicClick,
+  handleMicTouchStart,
+  handleMicTouchEnd,
+  handleMicMouseDown,
+  handleMicMouseUp,
+  isMobile,
+  handleSendMessage,
+  currentlyPlaying,
+  isWelcomeMode = false,
+  showInlineAuth = false,
+  shouldShowAuth = false,
+  showInlineAuthInput = false,
+  authPhoneState = false,
+  authOtpState = false,
+  activePage,
+  soundEnabled = true,
+  toggleSound,
+  inputPlaceholdersEnabled = false,
+  inputPlaceholders = ["Ask me anything...", "How can I help you?", "What would you like to know?"],
+  inputPlaceholderSpeed = 2.5,
+  inputPlaceholderAnimation = "fade"
+}) => {
+  const { isDarkMode } = useTheme();
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const isQuestionSendingRef = useRef(false);
+  const lastSentQuestionRef = useRef('');
+  const questionTimeoutRef = useRef(null);
+  // Disable input when typing OR when authentication is required
+  // Allow typing when asking for phone/OTP in chat flow
+  const shouldDisable = isTyping || (showInlineAuth && !verified && !showInlineAuthInput);
+  
+  // Rotating placeholder state
+  const [currentPlaceholderIndex, setCurrentPlaceholderIndex] = useState(0);
+  const [displayedPlaceholder, setDisplayedPlaceholder] = useState("");
+  const [isTypingPlaceholder, setIsTypingPlaceholder] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const placeholderIntervalRef = useRef(null);
+  const typewriterTimeoutRef = useRef(null);
+
+  const handleQuestionClick = (question) => {
+    // Prevent double-sending
+    if (isQuestionSendingRef.current || isTyping || !question.trim()) {
+      return;
+    }
+    
+    // Check if this exact question was sent very recently (within 2 seconds)
+    if (lastSentQuestionRef.current === question && questionTimeoutRef.current) {
+      return;
+    }
+    
+    // Mark as sending immediately
+    isQuestionSendingRef.current = true;
+    lastSentQuestionRef.current = question;
+    
+    // Clear any existing timeout
+    if (questionTimeoutRef.current) {
+      clearTimeout(questionTimeoutRef.current);
+    }
+    
+    // Send the message directly WITHOUT setting it in the input field first
+    // This prevents any double-send issues from state updates
+    if (handleSendMessage) {
+      // Send directly with the question text - don't update message state
+      handleSendMessage(question);
+    }
+    
+    // Reset flags after delay to allow next question
+    questionTimeoutRef.current = setTimeout(() => {
+      isQuestionSendingRef.current = false;
+      lastSentQuestionRef.current = '';
+      questionTimeoutRef.current = null;
+    }, 2000);
+  };
+
+  const handleAutoSuggestionClick = (suggestion) => {
+    setMessage(suggestion);
+    setShowSuggestions(false);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (questionTimeoutRef.current) {
+        clearTimeout(questionTimeoutRef.current);
+      }
+      if (placeholderIntervalRef.current) {
+        clearInterval(placeholderIntervalRef.current);
+      }
+      if (typewriterTimeoutRef.current) {
+        clearTimeout(typewriterTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Rotating placeholder logic
+  useEffect(() => {
+    // Don't rotate if disabled, typing, in auth flow, or input is focused
+    if (!inputPlaceholdersEnabled || isTyping || shouldDisable || isInputFocused || message.length > 0) {
+      // Use static placeholder
+      return;
+    }
+
+    // Check if we have valid placeholders
+    if (!inputPlaceholders || inputPlaceholders.length < 3) {
+      return;
+    }
+
+    const currentPlaceholder = inputPlaceholders[currentPlaceholderIndex];
+    
+    if (inputPlaceholderAnimation === "typewriter") {
+      // Typewriter effect
+      setIsTypingPlaceholder(true);
+      setDisplayedPlaceholder("");
+      let charIndex = 0;
+      
+      const typeNextChar = () => {
+        if (charIndex < currentPlaceholder.length) {
+          setDisplayedPlaceholder(currentPlaceholder.substring(0, charIndex + 1));
+          charIndex++;
+          typewriterTimeoutRef.current = setTimeout(typeNextChar, 50);
+        } else {
+          setIsTypingPlaceholder(false);
+          // Wait before switching to next placeholder
+          typewriterTimeoutRef.current = setTimeout(() => {
+            setCurrentPlaceholderIndex((prev) => (prev + 1) % inputPlaceholders.length);
+          }, inputPlaceholderSpeed * 1000);
+        }
+      };
+      
+      typeNextChar();
+    } else {
+      // Fade or slide - just switch placeholders
+      setDisplayedPlaceholder(currentPlaceholder);
+      
+      placeholderIntervalRef.current = setInterval(() => {
+        setCurrentPlaceholderIndex((prev) => (prev + 1) % inputPlaceholders.length);
+      }, inputPlaceholderSpeed * 1000);
+    }
+
+    return () => {
+      if (placeholderIntervalRef.current) {
+        clearInterval(placeholderIntervalRef.current);
+      }
+      if (typewriterTimeoutRef.current) {
+        clearTimeout(typewriterTimeoutRef.current);
+      }
+    };
+  }, [
+    inputPlaceholdersEnabled,
+    inputPlaceholders,
+    currentPlaceholderIndex,
+    inputPlaceholderSpeed,
+    inputPlaceholderAnimation,
+    isTyping,
+    shouldDisable,
+    isInputFocused,
+    message
+  ]);
+
+  // Reset placeholder index when placeholders change
+  useEffect(() => {
+    if (inputPlaceholders && inputPlaceholders.length > 0) {
+      setCurrentPlaceholderIndex(0);
+      setDisplayedPlaceholder(inputPlaceholders[0]);
+    }
+  }, [inputPlaceholders]);
+
+  // Get the placeholder text to display
+  const getPlaceholderText = () => {
+    // Priority: auth states > typing > rotating placeholder > default
+    if (isTyping) {
+      return "Thinking...";
+    }
+    if (showInlineAuth && !verified && showInlineAuthInput && authOtpState) {
+      return "Enter 6-digit OTP...";
+    }
+    if (showInlineAuth && !verified && showInlineAuthInput) {
+      return "Type your mobile number...";
+    }
+    if (showInlineAuth && !verified) {
+      return "Please verify to continue...";
+    }
+    
+    // Use rotating placeholder if enabled and conditions are met
+    if (inputPlaceholdersEnabled && !isInputFocused && message.length === 0 && !shouldDisable) {
+      if (inputPlaceholderAnimation === "typewriter" && displayedPlaceholder) {
+        return displayedPlaceholder;
+      }
+      if (inputPlaceholders && inputPlaceholders.length > 0) {
+        return inputPlaceholders[currentPlaceholderIndex] || "Ask me anything...";
+      }
+    }
+    
+    // Default static placeholder
+    return "Ask me anything...";
+  };
+
+  return (
+    <InputContainer $isDarkMode={isDarkMode} $isWelcomeMode={isWelcomeMode}>
+      <InputWrapper $isWelcomeMode={isWelcomeMode}>
+        {/* Auto Suggestions - Disabled */}
+        {/* {showSuggestions && !isTyping && (
+          <AutoSuggestions
+            inputValue={message}
+            onSuggestionClick={handleAutoSuggestionClick}
+            isWelcomeMode={isWelcomeMode}
+            showBelow={userMessageCount === 0}
+          />
+        )} */}
+
+        <ChatInput
+          $isDarkMode={isDarkMode}
+          value={message}
+          type={authPhoneState && !verified ? "tel" : "text"}
+          inputMode={authPhoneState && !verified ? "numeric" : "text"}
+          pattern={authPhoneState && !verified ? "[0-9]*" : undefined}
+          onChange={(e) => {
+            let newValue = e.target.value;
+            // Restrict to numbers only when asking for phone number
+            if (authPhoneState && !verified) {
+              // Only allow digits, spaces, +, and - (for phone number formats)
+              newValue = newValue.replace(/[^\d\+\-\s]/g, '');
+            }
+            setMessage(newValue);
+            // Suggestions disabled
+            // if (newValue.trim().length > 0) {
+            //   setShowSuggestions(true);
+            // } else {
+            //   setShowSuggestions(false);
+            // }
+          }}
+          onKeyDown={(e) => {
+            // Block non-numeric keys when asking for phone number (except backspace, delete, arrow keys, etc.)
+            if (authPhoneState && !verified) {
+              const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Enter'];
+              const isNumber = /^\d$/.test(e.key);
+              const isAllowedKey = allowedKeys.includes(e.key);
+              const isModifier = e.ctrlKey || e.metaKey || e.altKey;
+              
+              // Allow numbers, allowed keys, and modifier combinations (for copy/paste)
+              if (!isNumber && !isAllowedKey && !isModifier && !e.shiftKey) {
+                e.preventDefault();
+                return;
+              }
+            }
+            handleKeyPress(e);
+          }}
+          onFocus={() => {
+            setShowSuggestions(false);
+            setIsInputFocused(true);
+          }}
+          onBlur={() => {
+            setTimeout(() => {
+              setShowSuggestions(false);
+              setIsInputFocused(false);
+            }, 200);
+          }}
+          placeholder={getPlaceholderText()}
+          disabled={shouldDisable}
+          style={{
+            opacity: shouldDisable ? 0.6 : 1,
+            cursor: shouldDisable ? "not-allowed" : "text"
+          }}
+        />
+        <InputButtons>
+          <ActionButton
+            $variant="secondary"
+            $isRecording={false}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleMicClick();
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleMicTouchStart(e);
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleMicTouchEnd(e);
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleMicMouseDown(e);
+            }}
+            onMouseUp={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleMicMouseUp(e);
+            }}
+            disabled={true}
+            title="Microphone feature is disabled"
+            style={{
+              background: 'transparent',
+              color: '#9ca3af',
+              opacity: 0.5,
+              cursor: 'not-allowed',
+              pointerEvents: 'auto'
+            }}
+          >
+            <FiMic />
+          </ActionButton>
+          <SendButton
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!isTyping) {
+                handleSendMessage();
+              }
+            }}
+            disabled={shouldDisable}
+          >
+            <FiSend />
+          </SendButton>
+        </InputButtons>
+      </InputWrapper>
+
+      {/* Service Suggestions - hidden */}
+      {/* <ServiceSuggestions
+        isWelcomeMode={isWelcomeMode}
+        onQuestionClick={handleQuestionClick}
+        activePage={activePage}
+      /> */}
+
+      {/* Feature highlights */}
+      {/* Powered by branding moved to sidebar */}
+    </InputContainer>
+  );
+};
+
+export default InputArea;
