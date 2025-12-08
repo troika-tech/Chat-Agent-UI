@@ -1,83 +1,286 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useTheme } from '../contexts/ThemeContext';
+import { FaEnvelope, FaSpinner, FaCheckCircle, FaRocket, FaShieldAlt, FaClock, FaCheck } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 
 const PageWrapper = styled.div`
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 48px 16px 72px;
-  overflow-y: auto;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  overflow: hidden;
   background: ${p =>
     p.$isDarkMode
-      ? 'radial-gradient(circle at 20% 20%, rgba(99,102,241,0.2), transparent 55%), #050816'
-      : 'radial-gradient(circle at 30% 15%, rgba(79,70,229,0.18), transparent 52%), #f3f7ff'};
+      ? '#0f172a'
+      : '#ffffff'};
 
-  @media (max-width: 720px) {
-    padding: 32px 12px 48px;
+  @media (max-width: 968px) {
+    flex-direction: column;
+    overflow-y: auto;
   }
 `;
 
-const Container = styled.div`
+const LeftSection = styled.div`
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
-  padding: 32px 24px 48px;
-  width: min(920px, 100%);
-  background: ${p => p.$isDarkMode ? 'rgba(15, 23, 42, 0.6)' : 'linear-gradient(180deg, #f8fbff 0%, #ffffff 60%)'};
-  border-radius: 24px;
-  box-shadow: ${p => p.$isDarkMode ? '0 20px 45px rgba(0,0,0,0.45)' : '0 25px 55px rgba(15, 23, 42, 0.08)'};
+  justify-content: center;
+  padding: 64px 48px;
+  background: ${p => p.$isDarkMode 
+    ? '#1e293b' 
+    : '#f8f8f7'};
+  position: relative;
+  overflow: hidden;
+  background-image: ${p => p.$isDarkMode 
+    ? 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px)' 
+    : 'radial-gradient(circle, #a8a29e 1px, transparent 1px)'};
+  background-size: 24px 24px;
+
+  @media (max-width: 968px) {
+    min-height: 40vh;
+    padding: 48px 32px;
+  }
+
+  @media (max-width: 720px) {
+    min-height: 35vh;
+    padding: 32px 24px;
+  }
+`;
+
+const LeftContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  max-width: 560px;
+  text-align: center;
+  z-index: 2;
+  position: relative;
+  animation: fadeInUp 0.8s ease-out;
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 968px) {
+    gap: 16px;
+    max-width: 100%;
+  }
+`;
+
+const EmailIconWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+`;
+
+const TitleWithIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
 
   @media (max-width: 720px) {
     gap: 16px;
-    padding: 20px 16px 32px;
-    border-radius: 20px;
   }
 `;
 
-const Title = styled.h2`
-  margin: 0 0 4px 0;
-  color: ${p => p.$isDarkMode ? '#f9fafb' : '#111827'};
-  text-align: center;
+const LeftTitle = styled.h1`
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: ${p => p.$isDarkMode ? '#ffffff' : '#1f2937'};
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-shadow: ${p => p.$isDarkMode ? '0 2px 10px rgba(0, 0, 0, 0.1)' : 'none'};
+
+  @media (max-width: 968px) {
+    font-size: 2rem;
+  }
+
   @media (max-width: 720px) {
-    font-size: 1.1rem;
+    font-size: 1.75rem;
+  }
+`;
+
+const LeftSubtitle = styled.p`
+  margin: 0;
+  font-size: 1.125rem;
+  color: ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.95)' : '#4b5563'};
+  line-height: 1.6;
+  font-weight: 400;
+  max-width: 480px;
+
+  @media (max-width: 968px) {
+    font-size: 1rem;
+  }
+
+  @media (max-width: 720px) {
+    font-size: 0.9375rem;
+  }
+`;
+
+const FeaturesList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  margin-top: 16px;
+  padding-top: 20px;
+  border-top: 1px solid ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(31, 41, 55, 0.2)'};
+
+  @media (max-width: 968px) {
+    display: none;
+  }
+`;
+
+const FeatureItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.95)' : '#374151'};
+  font-size: 1.0625rem;
+  text-align: left;
+  font-weight: 500;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+
+  &:hover {
+    transform: translateX(4px);
+    opacity: 1;
+  }
+`;
+
+const FeatureIcon = styled.div`
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(31, 41, 55, 0.1)'};
+  border-radius: 12px;
+  flex-shrink: 0;
+  backdrop-filter: blur(10px);
+  border: 1px solid ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(31, 41, 55, 0.1)'};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+
+  ${FeatureItem}:hover & {
+    background: ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(31, 41, 55, 0.15)'};
+    transform: scale(1.1);
+  }
+`;
+
+
+const RightSection = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 48px;
+  background: ${p => p.$isDarkMode ? '#1e293b' : '#ffffff'};
+  overflow-y: auto;
+  position: relative;
+
+  @media (max-width: 968px) {
+    padding: 40px 32px;
+    min-height: 60vh;
+  }
+
+  @media (max-width: 720px) {
+    padding: 32px 24px;
+  }
+`;
+
+const RightContent = styled.div`
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  animation: fadeInRight 0.8s ease-out;
+
+  @keyframes fadeInRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @media (max-width: 968px) {
+    max-width: 700px;
+    gap: 28px;
+  }
+`;
+
+const FormHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+`;
+
+const Title = styled.h2`
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: ${p => p.$isDarkMode ? '#f9fafb' : '#111827'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  letter-spacing: -0.02em;
+
+  @media (max-width: 720px) {
+    font-size: 1.75rem;
   }
 `;
 
 const Subtitle = styled.p`
-  margin: 0 0 12px 0;
+  margin: 0;
   color: ${p => p.$isDarkMode ? '#94a3b8' : '#6b7280'};
-  text-align: center;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  line-height: 1.5;
+
   @media (max-width: 720px) {
     font-size: 0.9rem;
   }
 `;
 
-const AccentBar = styled.div`
-  width: 120px;
-  height: 6px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
-`;
-
 const TemplateList = styled.div`
   width: 100%;
-  max-width: 640px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-right: 8px;
 `;
 
 const Card = styled.button`
-  border: 2px solid ${p => p.$active ? '#a855f7' : 'transparent'};
+  border: 2px solid ${p => p.$active ? '#1f2937' : 'transparent'};
   background: ${p => p.$isDarkMode ? '#111827' : '#ffffff'};
   color: inherit;
   border-radius: 16px;
@@ -90,14 +293,14 @@ const Card = styled.button`
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
   box-shadow: ${p =>
     p.$active
-      ? '0 15px 35px rgba(168,85,247,0.25)'
+      ? '0 15px 35px rgba(31, 41, 55, 0.25)'
       : p.$isDarkMode
       ? '0 12px 25px rgba(0,0,0,0.35)'
       : '0 12px 30px rgba(15, 23, 42, 0.08)'};
 
   &:hover {
     transform: translateY(-2px);
-    border-color: #a855f7;
+    border-color: #1f2937;
   }
 `;
 
@@ -140,59 +343,66 @@ const Desc = styled.p`
 const EmailInputContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
-  max-width: 420px;
-  align-self: center;
 `;
 
 const EmailInput = styled.input`
-  padding: 14px 16px;
+  width: 100%;
+  padding: 16px 18px;
   border: 2px solid ${p => p.$isDarkMode ? '#374151' : '#e5e7eb'};
   background: ${p => p.$isDarkMode ? '#1f2937' : '#ffffff'};
   color: ${p => p.$isDarkMode ? '#f9fafb' : '#111827'};
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 1rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
+  font-weight: 500;
+
+  &:hover {
+    border-color: ${p => p.$isDarkMode ? '#4b5563' : '#d1d5db'};
+  }
 
   &:focus {
-    border-color: #8b5cf6;
+    border-color: #1f2937;
+    box-shadow: 0 0 0 4px rgba(31, 41, 55, 0.1);
+    transform: translateY(-1px);
   }
 
   &::placeholder {
     color: ${p => p.$isDarkMode ? '#6b7280' : '#9ca3af'};
+    font-weight: 400;
   }
 `;
 
 const SendBtn = styled.button`
-  align-self: center;
-  padding: 12px 18px;
+  width: 100%;
+  padding: 16px 24px;
   border: none;
   border-radius: 12px;
-  background: ${p => p.$isDarkMode ? '#0f172a' : '#0b1120'};
-  color: #f8fafc;
+  background: ${p => p.$isDarkMode ? '#1f2937' : '#1f2937'};
+  color: #ffffff;
   font-weight: 600;
+  font-size: 1rem;
   cursor: pointer;
   opacity: ${p => p.disabled ? 0.5 : 1};
-  min-width: 180px;
-  box-shadow: ${p => p.$isDarkMode ? '0 18px 35px rgba(0,0,0,0.4)' : '0 20px 35px rgba(15,17,32,0.35)'};
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  min-height: 48px;
+  box-shadow: ${p => p.$isDarkMode ? '0 18px 35px rgba(0,0,0,0.4)' : '0 20px 35px rgba(31, 41, 55, 0.25)'};
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 
   &:hover:not(:disabled) {
+    background: ${p => p.$isDarkMode ? '#111827' : '#111827'};
     transform: translateY(-2px);
-    box-shadow: ${p => p.$isDarkMode ? '0 22px 40px rgba(0,0,0,0.55)' : '0 24px 45px rgba(15,17,32,0.45)'};
-  }
-
-  @media (max-width: 720px) {
-    width: 100%;
-    max-width: 420px;
+    box-shadow: ${p => p.$isDarkMode ? '0 22px 40px rgba(0,0,0,0.55)' : '0 24px 45px rgba(31, 41, 55, 0.35)'};
   }
 `;
 
 const ConfirmationBanner = styled.div`
   width: 100%;
-  max-width: 420px;
   background: ${p => p.$isDarkMode ? 'rgba(16, 185, 129, 0.1)' : '#ecfdf5'};
   border: 1px solid ${p => p.$isDarkMode ? 'rgba(16, 185, 129, 0.4)' : '#6ee7b7'};
   color: ${p => p.$isDarkMode ? '#6ee7b7' : '#047857'};
@@ -200,7 +410,10 @@ const ConfirmationBanner = styled.div`
   border-radius: 10px;
   font-size: 0.9rem;
   text-align: center;
-  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 `;
 
 const ServiceSelection = ({ chatbotId, apiBase }) => {
@@ -370,10 +583,27 @@ const ServiceSelection = ({ chatbotId, apiBase }) => {
   if (loadingTemplates) {
     return (
       <PageWrapper $isDarkMode={isDarkMode}>
-        <Container $isDarkMode={isDarkMode}>
-          <Title $isDarkMode={isDarkMode}>Loading Email Templates...</Title>
-          <Subtitle $isDarkMode={isDarkMode}>Please wait while we load available templates.</Subtitle>
-        </Container>
+        <LeftSection $isDarkMode={isDarkMode}>
+          <LeftContent>
+          <TitleWithIcon>
+            <EmailIconWrapper>
+              <FaEnvelope style={{ fontSize: '3.5rem', color: isDarkMode ? '#ffffff' : '#1f2937' }} />
+            </EmailIconWrapper>
+            <LeftTitle $isDarkMode={isDarkMode}>Loading...</LeftTitle>
+          </TitleWithIcon>
+            <LeftSubtitle $isDarkMode={isDarkMode}>Please wait while we load available templates.</LeftSubtitle>
+          </LeftContent>
+        </LeftSection>
+        <RightSection $isDarkMode={isDarkMode}>
+          <RightContent>
+            <FormHeader>
+              <Title $isDarkMode={isDarkMode}>
+                <FaSpinner style={{ animation: "spin 1s linear infinite" }} />
+                Loading Templates
+              </Title>
+            </FormHeader>
+          </RightContent>
+        </RightSection>
       </PageWrapper>
     );
   }
@@ -381,110 +611,186 @@ const ServiceSelection = ({ chatbotId, apiBase }) => {
   if (templates.length === 0) {
     return (
       <PageWrapper $isDarkMode={isDarkMode}>
-        <Container $isDarkMode={isDarkMode}>
-          <Title $isDarkMode={isDarkMode}>No Email Templates Available</Title>
-          <Subtitle $isDarkMode={isDarkMode}>Please contact support for assistance.</Subtitle>
-        </Container>
+        <LeftSection $isDarkMode={isDarkMode}>
+          <LeftContent>
+          <TitleWithIcon>
+            <EmailIconWrapper>
+              <FaEnvelope style={{ fontSize: '3.5rem', color: isDarkMode ? '#ffffff' : '#1f2937' }} />
+            </EmailIconWrapper>
+            <LeftTitle $isDarkMode={isDarkMode}>Send Email Templates</LeftTitle>
+          </TitleWithIcon>
+            <LeftSubtitle $isDarkMode={isDarkMode}>
+              Instantly deliver professional email templates directly to your inbox.
+            </LeftSubtitle>
+          </LeftContent>
+        </LeftSection>
+        <RightSection $isDarkMode={isDarkMode}>
+          <RightContent>
+            <FormHeader>
+              <Title $isDarkMode={isDarkMode}>
+                <FaEnvelope style={{ color: "#1f2937" }} />
+                No Email Templates Available
+              </Title>
+              <Subtitle $isDarkMode={isDarkMode}>Please contact support for assistance.</Subtitle>
+            </FormHeader>
+          </RightContent>
+        </RightSection>
       </PageWrapper>
     );
   }
 
   return (
     <PageWrapper $isDarkMode={isDarkMode}>
-    <Container $isDarkMode={isDarkMode}>
-      <AccentBar />
-      <Title $isDarkMode={isDarkMode}>
-        {showEmailInput 
-          ? `Send: ${selected?.name || 'Email Template'}` 
-          : 'Select an Email Template'}
-      </Title>
+      <LeftSection $isDarkMode={isDarkMode}>
+        <LeftContent>
+          <TitleWithIcon>
+            <EmailIconWrapper>
+              <FaEnvelope style={{ fontSize: '3.5rem', color: isDarkMode ? '#ffffff' : '#1f2937' }} />
+            </EmailIconWrapper>
+            <LeftTitle $isDarkMode={isDarkMode}>Send Email Templates</LeftTitle>
+          </TitleWithIcon>
+          <LeftSubtitle $isDarkMode={isDarkMode}>
+            Instantly deliver professional email templates directly to your inbox. Fast, secure, and reliable.
+          </LeftSubtitle>
+          <FeaturesList $isDarkMode={isDarkMode}>
+            <FeatureItem $isDarkMode={isDarkMode}>
+              <FeatureIcon $isDarkMode={isDarkMode}>
+                <FaRocket style={{ color: isDarkMode ? '#ffffff' : '#1f2937', fontSize: '1.125rem' }} />
+              </FeatureIcon>
+              <span>Instant delivery to your email</span>
+            </FeatureItem>
+            <FeatureItem $isDarkMode={isDarkMode}>
+              <FeatureIcon $isDarkMode={isDarkMode}>
+                <FaCheck style={{ color: isDarkMode ? '#ffffff' : '#1f2937', fontSize: '1.125rem' }} />
+              </FeatureIcon>
+              <span>Professional templates ready to use</span>
+            </FeatureItem>
+            <FeatureItem $isDarkMode={isDarkMode}>
+              <FeatureIcon $isDarkMode={isDarkMode}>
+                <FaShieldAlt style={{ color: isDarkMode ? '#ffffff' : '#1f2937', fontSize: '1.125rem' }} />
+              </FeatureIcon>
+              <span>Secure and encrypted delivery</span>
+            </FeatureItem>
+            <FeatureItem $isDarkMode={isDarkMode}>
+              <FeatureIcon $isDarkMode={isDarkMode}>
+                <FaClock style={{ color: isDarkMode ? '#ffffff' : '#1f2937', fontSize: '1.125rem' }} />
+              </FeatureIcon>
+              <span>Access templates anytime, anywhere</span>
+            </FeatureItem>
+          </FeaturesList>
+        </LeftContent>
+      </LeftSection>
+      <RightSection $isDarkMode={isDarkMode}>
+        <RightContent>
+          <FormHeader>
+            <Title $isDarkMode={isDarkMode}>
+              <FaEnvelope style={{ color: "#1f2937" }} />
+              {showEmailInput 
+                ? `Send: ${selected?.name || 'Email Template'}` 
+                : 'Select an Email Template'}
+            </Title>
+            <Subtitle $isDarkMode={isDarkMode}>
+              {showEmailInput
+                ? 'Enter your email to receive the selected template.'
+                : "Choose a template to receive via email."}
+            </Subtitle>
+          </FormHeader>
 
-      <Subtitle $isDarkMode={isDarkMode}>
-        {showEmailInput
-          ? 'Enter your email to receive the selected template.'
-          : "Choose a template to receive via email."}
-      </Subtitle>
-
-      {confirmationMessage && !showEmailInput && (
-        <ConfirmationBanner $isDarkMode={isDarkMode}>
-          {confirmationMessage}
-        </ConfirmationBanner>
-      )}
-
-      {!showEmailInput ? (
-        <>
-          <TemplateList $isDarkMode={isDarkMode}>
-            {templates.map(template => (
-              <Card
-                key={template.id}
-                onClick={() => setSelected(template)}
-                $active={selected?.id === template.id}
-                $isDarkMode={isDarkMode}
-              >
-                <CardHeader>
-                  <div>
-                    <CardTitle $isDarkMode={isDarkMode}>{template.name}</CardTitle>
-                    <CardSubtitle $isDarkMode={isDarkMode}>{template.desc}</CardSubtitle>
-                  </div>
-                  {selected?.id === template.id && (
-                    <SelectedBadge $isDarkMode={isDarkMode}>
-                      Selected
-                    </SelectedBadge>
-                  )}
-                </CardHeader>
-                <Desc $isDarkMode={isDarkMode}>{template.long}</Desc>
-              </Card>
-            ))}
-          </TemplateList>
-          <SendBtn disabled={!selected || sending} onClick={handleSendClick} $isDarkMode={isDarkMode}>
-            Get Details
-          </SendBtn>
-        </>
-      ) : (
-        <EmailInputContainer>
-          <EmailInput
-            type="email"
-            placeholder="Enter your email address"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setEmailError('');
-            }}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') handleEmailSubmit();
-            }}
-            $isDarkMode={isDarkMode}
-            autoFocus
-          />
-          {emailError && (
-            <div style={{color: '#ef4444', fontSize: '0.875rem', textAlign: 'center'}}>
-              {emailError}
-            </div>
+          {confirmationMessage && !showEmailInput && (
+            <ConfirmationBanner $isDarkMode={isDarkMode}>
+              <FaCheckCircle />
+              {confirmationMessage}
+            </ConfirmationBanner>
           )}
-          <SendBtn disabled={sending} onClick={handleEmailSubmit}>
-            {sending ? 'Sending…' : 'Send Email'}
-          </SendBtn>
-          <button
-            onClick={() => {
-              setShowEmailInput(false);
-              setEmail('');
-              setEmailError('');
-              setConfirmationMessage('');
-            }}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: isDarkMode ? '#94a3b8' : '#6b7280',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              textDecoration: 'underline'
-            }}
-          >
-            Back
-          </button>
-        </EmailInputContainer>
-      )}
-    </Container>
+
+          {!showEmailInput ? (
+            <>
+              <TemplateList $isDarkMode={isDarkMode}>
+                {templates.map(template => (
+                  <Card
+                    key={template.id}
+                    onClick={() => setSelected(template)}
+                    $active={selected?.id === template.id}
+                    $isDarkMode={isDarkMode}
+                  >
+                    <CardHeader>
+                      <div>
+                        <CardTitle $isDarkMode={isDarkMode}>{template.name}</CardTitle>
+                        <CardSubtitle $isDarkMode={isDarkMode}>{template.desc}</CardSubtitle>
+                      </div>
+                      {selected?.id === template.id && (
+                        <SelectedBadge $isDarkMode={isDarkMode}>
+                          Selected
+                        </SelectedBadge>
+                      )}
+                    </CardHeader>
+                    <Desc $isDarkMode={isDarkMode}>{template.long}</Desc>
+                  </Card>
+                ))}
+              </TemplateList>
+              <SendBtn disabled={!selected || sending} onClick={handleSendClick} $isDarkMode={isDarkMode}>
+                <FaEnvelope />
+                Send Email
+              </SendBtn>
+            </>
+          ) : (
+            <EmailInputContainer>
+              <EmailInput
+                type="email"
+                placeholder="Enter your email address"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setEmailError('');
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') handleEmailSubmit();
+                }}
+                $isDarkMode={isDarkMode}
+                autoFocus
+              />
+              {emailError && (
+                <div style={{color: '#ef4444', fontSize: '0.875rem', textAlign: 'center'}}>
+                  {emailError}
+                </div>
+              )}
+              <SendBtn disabled={sending} onClick={handleEmailSubmit} $isDarkMode={isDarkMode}>
+                {sending ? (
+                  <>
+                    <FaSpinner style={{ animation: "spin 1s linear infinite" }} />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <FaEnvelope />
+                    Send 
+                  </>
+                )}
+              </SendBtn>
+              <button
+                onClick={() => {
+                  setShowEmailInput(false);
+                  setEmail('');
+                  setEmailError('');
+                  setConfirmationMessage('');
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: isDarkMode ? '#94a3b8' : '#6b7280',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  textDecoration: 'underline',
+                  textAlign: 'center',
+                  padding: '8px'
+                }}
+              >
+                Back
+              </button>
+            </EmailInputContainer>
+          )}
+        </RightContent>
+      </RightSection>
     </PageWrapper>
   );
 };

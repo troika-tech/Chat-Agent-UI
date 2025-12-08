@@ -1,72 +1,330 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useTheme } from '../contexts/ThemeContext';
-import { FaWhatsapp, FaSpinner, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
+import { FaWhatsapp, FaSpinner, FaCheckCircle, FaExclamationCircle, FaCheck, FaRocket, FaShieldAlt, FaClock, FaCommentDots } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 
 const PageWrapper = styled.div`
   width: 100%;
-  min-height: 100%;
+  height: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 48px 16px 72px;
-  overflow-y: auto;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  overflow: hidden;
   background: ${p =>
     p.$isDarkMode
-      ? 'radial-gradient(circle at 20% 20%, rgba(99,102,241,0.2), transparent 55%), #050816'
-      : 'radial-gradient(circle at 30% 15%, rgba(79,70,229,0.18), transparent 52%), #f3f7ff'};
+      ? '#0f172a'
+      : '#ffffff'};
 
-  @media (max-width: 720px) {
-    padding: 32px 12px 48px;
+  @media (max-width: 968px) {
+    flex-direction: column;
+    overflow-y: auto;
   }
 `;
 
-const Container = styled.div`
+const LeftSection = styled.div`
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
-  padding: 32px 24px 48px;
-  width: min(920px, 100%);
-  background: ${p => p.$isDarkMode ? 'rgba(15, 23, 42, 0.6)' : 'linear-gradient(180deg, #f8fbff 0%, #ffffff 60%)'};
-  border-radius: 24px;
-  box-shadow: ${p => p.$isDarkMode ? '0 20px 45px rgba(0,0,0,0.45)' : '0 25px 55px rgba(15, 23, 42, 0.08)'};
+  justify-content: center;
+  padding: 64px 48px;
+  background: ${p => p.$isDarkMode 
+    ? '#1e293b' 
+    : '#f8f8f7'};
+  position: relative;
+  overflow: hidden;
+  background-image: ${p => p.$isDarkMode 
+    ? 'radial-gradient(circle, rgba(255, 255, 255, 0.1) 1px, transparent 1px)' 
+    : 'radial-gradient(circle, #a8a29e 1px, transparent 1px)'};
+  background-size: 24px 24px;
+
+  @media (max-width: 968px) {
+    min-height: 40vh;
+    padding: 48px 32px;
+  }
+
+  @media (max-width: 720px) {
+    min-height: 35vh;
+    padding: 32px 24px;
+  }
+`;
+
+const LeftContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  max-width: 560px;
+  text-align: center;
+  z-index: 2;
+  position: relative;
+  animation: fadeInUp 0.8s ease-out;
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 968px) {
+    gap: 16px;
+    max-width: 100%;
+  }
+`;
+
+const WhatsAppIconWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+`;
+
+const TitleWithIcon = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
 
   @media (max-width: 720px) {
     gap: 16px;
-    padding: 20px 16px 32px;
-    border-radius: 20px;
   }
 `;
 
-const AccentBar = styled.div`
-  width: 120px;
-  height: 6px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #10b981, #059669, #047857);
+const LeftTitle = styled.h1`
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: ${p => p.$isDarkMode ? '#ffffff' : '#1f2937'};
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-shadow: ${p => p.$isDarkMode ? '0 2px 10px rgba(0, 0, 0, 0.1)' : 'none'};
+
+  @media (max-width: 968px) {
+    font-size: 2rem;
+  }
+
+  @media (max-width: 720px) {
+    font-size: 1.75rem;
+  }
+`;
+
+const LeftSubtitle = styled.p`
+  margin: 0;
+  font-size: 1.125rem;
+  color: ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.95)' : '#4b5563'};
+  line-height: 1.6;
+  font-weight: 400;
+  max-width: 480px;
+
+  @media (max-width: 968px) {
+    font-size: 1rem;
+  }
+
+  @media (max-width: 720px) {
+    font-size: 0.9375rem;
+  }
+`;
+
+const FeaturesList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  margin-top: 16px;
+  padding-top: 20px;
+  border-top: 1px solid ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(31, 41, 55, 0.2)'};
+
+  @media (max-width: 968px) {
+    display: none;
+  }
+`;
+
+const FeatureItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.95)' : '#374151'};
+  font-size: 1.0625rem;
+  text-align: left;
+  font-weight: 500;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+
+  &:hover {
+    transform: translateX(4px);
+    opacity: 1;
+  }
+`;
+
+const FeatureIcon = styled.div`
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(31, 41, 55, 0.1)'};
+  border-radius: 12px;
+  flex-shrink: 0;
+  backdrop-filter: blur(10px);
+  border: 1px solid ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(31, 41, 55, 0.1)'};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+
+  ${FeatureItem}:hover & {
+    background: ${p => p.$isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(31, 41, 55, 0.15)'};
+    transform: scale(1.1);
+  }
+`;
+
+const DecorativePattern = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: ${p => p.$isDarkMode ? 0.1 : 0.2};
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 45%),
+    radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.3) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
+  z-index: 1;
+  animation: pulse 8s ease-in-out infinite;
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: ${p => p.$isDarkMode ? 0.1 : 0.2};
+    }
+    50% {
+      opacity: ${p => p.$isDarkMode ? 0.15 : 0.25};
+    }
+  }
+`;
+
+const FloatingShape = styled.div`
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  filter: blur(60px);
+  z-index: 1;
+  animation: float 12s ease-in-out infinite;
+
+  &:nth-child(1) {
+    top: -100px;
+    left: -100px;
+    animation-delay: 0s;
+  }
+
+  &:nth-child(2) {
+    bottom: -100px;
+    right: -100px;
+    animation-delay: 4s;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(30px, -30px) scale(1.1);
+    }
+    66% {
+      transform: translate(-30px, 30px) scale(0.9);
+    }
+  }
+`;
+
+const RightSection = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 48px;
+  background: ${p => p.$isDarkMode ? '#1e293b' : '#ffffff'};
+  overflow-y: auto;
+  position: relative;
+
+  @media (max-width: 968px) {
+    padding: 40px 32px;
+    min-height: 60vh;
+  }
+
+  @media (max-width: 720px) {
+    padding: 32px 24px;
+  }
+`;
+
+const RightContent = styled.div`
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  animation: fadeInRight 0.8s ease-out;
+
+  @keyframes fadeInRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @media (max-width: 968px) {
+    max-width: 600px;
+    gap: 28px;
+  }
+`;
+
+const FormHeader = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
 `;
 
 const Title = styled.h2`
-  margin: 0 0 4px 0;
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 800;
   color: ${p => p.$isDarkMode ? '#f9fafb' : '#111827'};
-  text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
+  letter-spacing: -0.02em;
+
   @media (max-width: 720px) {
-    font-size: 1.1rem;
+    font-size: 1.75rem;
   }
 `;
 
 const Subtitle = styled.p`
-  margin: 0 0 12px 0;
+  margin: 0;
   color: ${p => p.$isDarkMode ? '#94a3b8' : '#6b7280'};
-  text-align: center;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  line-height: 1.5;
+
   @media (max-width: 720px) {
     font-size: 0.9rem;
   }
@@ -74,7 +332,6 @@ const Subtitle = styled.p`
 
 const FormContainer = styled.div`
   width: 100%;
-  max-width: 500px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -87,26 +344,34 @@ const FormGroup = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: ${p => p.$isDarkMode ? '#d1d5db' : '#374151'};
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: ${p => p.$isDarkMode ? '#e5e7eb' : '#1f2937'};
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
 `;
 
 const Select = styled.select`
   width: 100%;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border: 2px solid ${p => p.$isDarkMode ? '#374151' : '#e5e7eb'};
   background: ${p => p.$isDarkMode ? '#1f2937' : '#ffffff'};
   color: ${p => p.$isDarkMode ? '#f9fafb' : '#111827'};
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 1rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
   cursor: pointer;
+  font-weight: 500;
+
+  &:hover {
+    border-color: ${p => p.$isDarkMode ? '#4b5563' : '#d1d5db'};
+  }
 
   &:focus {
-    border-color: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    border-color: #1f2937;
+    box-shadow: 0 0 0 4px rgba(31, 41, 55, 0.1);
+    transform: translateY(-1px);
   }
 
   &:disabled {
@@ -117,22 +382,29 @@ const Select = styled.select`
 
 const Input = styled.input`
   width: 100%;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border: 2px solid ${p => p.$isDarkMode ? '#374151' : '#e5e7eb'};
   background: ${p => p.$isDarkMode ? '#1f2937' : '#ffffff'};
   color: ${p => p.$isDarkMode ? '#f9fafb' : '#111827'};
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 1rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s ease;
+  font-weight: 500;
+
+  &:hover {
+    border-color: ${p => p.$isDarkMode ? '#4b5563' : '#d1d5db'};
+  }
 
   &:focus {
-    border-color: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    border-color: #1f2937;
+    box-shadow: 0 0 0 4px rgba(31, 41, 55, 0.1);
+    transform: translateY(-1px);
   }
 
   &::placeholder {
     color: ${p => p.$isDarkMode ? '#6b7280' : '#9ca3af'};
+    font-weight: 400;
   }
 
   &:disabled {
@@ -207,23 +479,22 @@ const CancelButton = styled(Button)`
 `;
 
 const SendButton = styled(Button)`
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: ${p => p.$isDarkMode ? '#1f2937' : '#1f2937'};
   color: #ffffff;
-  box-shadow: ${p => p.$isDarkMode ? '0 18px 35px rgba(0,0,0,0.4)' : '0 20px 35px rgba(16, 185, 129, 0.25)'};
+  box-shadow: ${p => p.$isDarkMode ? '0 18px 35px rgba(0,0,0,0.4)' : '0 20px 35px rgba(31, 41, 55, 0.25)'};
 
   &:hover:not(:disabled) {
-    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    background: ${p => p.$isDarkMode ? '#374151' : '#374151'};
     transform: translateY(-2px);
-    box-shadow: ${p => p.$isDarkMode ? '0 22px 40px rgba(0,0,0,0.55)' : '0 24px 45px rgba(16, 185, 129, 0.35)'};
+    box-shadow: ${p => p.$isDarkMode ? '0 22px 40px rgba(0,0,0,0.55)' : '0 24px 45px rgba(31, 41, 55, 0.35)'};
   }
 `;
 
 const ConfirmationBanner = styled.div`
   width: 100%;
-  max-width: 500px;
-  background: ${p => p.$isDarkMode ? 'rgba(16, 185, 129, 0.1)' : '#ecfdf5'};
-  border: 1px solid ${p => p.$isDarkMode ? 'rgba(16, 185, 129, 0.4)' : '#6ee7b7'};
-  color: ${p => p.$isDarkMode ? '#6ee7b7' : '#047857'};
+  background: ${p => p.$isDarkMode ? 'rgba(31, 41, 55, 0.3)' : '#f3f4f6'};
+  border: 1px solid ${p => p.$isDarkMode ? 'rgba(31, 41, 55, 0.6)' : '#d1d5db'};
+  color: ${p => p.$isDarkMode ? '#e5e7eb' : '#374151'};
   padding: 12px 16px;
   border-radius: 10px;
   font-size: 0.9rem;
@@ -411,13 +682,27 @@ const WhatsAppProposalSelection = ({ chatbotId, apiBase, authenticatedPhone = nu
   if (loadingTemplates) {
     return (
       <PageWrapper $isDarkMode={isDarkMode}>
-        <Container $isDarkMode={isDarkMode}>
+        <LeftSection $isDarkMode={isDarkMode}>
+          <LeftContent>
+            <TitleWithIcon>
+              <WhatsAppIconWrapper>
+                <FaWhatsapp style={{ fontSize: '3.5rem', color: isDarkMode ? '#ffffff' : '#1f2937' }} />
+              </WhatsAppIconWrapper>
+              <LeftTitle $isDarkMode={isDarkMode}>Loading...</LeftTitle>
+            </TitleWithIcon>
+            <LeftSubtitle $isDarkMode={isDarkMode}>Please wait while we load available templates.</LeftSubtitle>
+          </LeftContent>
+        </LeftSection>
+        <RightSection $isDarkMode={isDarkMode}>
+          <RightContent>
+            <FormHeader>
           <Title $isDarkMode={isDarkMode}>
-            <FaWhatsapp style={{ color: "#10b981" }} />
-            Loading WhatsApp Proposals...
+                <FaSpinner style={{ animation: "spin 1s linear infinite" }} />
+                Loading Templates
           </Title>
-          <Subtitle $isDarkMode={isDarkMode}>Please wait while we load available templates.</Subtitle>
-        </Container>
+            </FormHeader>
+          </RightContent>
+        </RightSection>
       </PageWrapper>
     );
   }
@@ -425,15 +710,30 @@ const WhatsAppProposalSelection = ({ chatbotId, apiBase, authenticatedPhone = nu
   if (templates.length === 0 && !loadingTemplates) {
     return (
       <PageWrapper $isDarkMode={isDarkMode}>
-        <Container $isDarkMode={isDarkMode}>
-          <AccentBar />
+        <LeftSection $isDarkMode={isDarkMode}>
+          <LeftContent>
+            <TitleWithIcon>
+              <WhatsAppIconWrapper>
+                <FaWhatsapp style={{ fontSize: '3.5rem', color: isDarkMode ? '#ffffff' : '#1f2937' }} />
+              </WhatsAppIconWrapper>
+              <LeftTitle $isDarkMode={isDarkMode}>Send WhatsApp Proposals</LeftTitle>
+            </TitleWithIcon>
+            <LeftSubtitle $isDarkMode={isDarkMode}>
+              Instantly deliver professional proposals directly to your client's WhatsApp.
+            </LeftSubtitle>
+          </LeftContent>
+        </LeftSection>
+        <RightSection $isDarkMode={isDarkMode}>
+          <RightContent>
+            <FormHeader>
           <Title $isDarkMode={isDarkMode}>
-            <FaWhatsapp style={{ color: "#10b981" }} />
+            <FaWhatsapp style={{ color: isDarkMode ? "#ffffff" : "#1f2937" }} />
             Send WhatsApp Proposal
           </Title>
           <Subtitle $isDarkMode={isDarkMode}>
             Choose a proposal template to receive via WhatsApp.
           </Subtitle>
+            </FormHeader>
           
           {error && (
             <ErrorMessage $isDarkMode={isDarkMode}>
@@ -453,22 +753,64 @@ const WhatsAppProposalSelection = ({ chatbotId, apiBase, authenticatedPhone = nu
               </HelpText>
             </FormGroup>
           </FormContainer>
-        </Container>
+          </RightContent>
+        </RightSection>
       </PageWrapper>
     );
   }
 
   return (
     <PageWrapper $isDarkMode={isDarkMode}>
-      <Container $isDarkMode={isDarkMode}>
-        <AccentBar />
+      <LeftSection $isDarkMode={isDarkMode}>
+        <LeftContent>
+          <TitleWithIcon>
+            <WhatsAppIconWrapper>
+              <FaWhatsapp style={{ fontSize: '3.5rem', color: isDarkMode ? '#ffffff' : '#1f2937' }} />
+            </WhatsAppIconWrapper>
+            <LeftTitle $isDarkMode={isDarkMode}>Send WhatsApp Proposals</LeftTitle>
+          </TitleWithIcon>
+          <LeftSubtitle $isDarkMode={isDarkMode}>
+            Instantly deliver professional proposals directly to your client's WhatsApp. Fast, secure, and reliable.
+          </LeftSubtitle>
+          <FeaturesList $isDarkMode={isDarkMode}>
+            <FeatureItem $isDarkMode={isDarkMode}>
+              <FeatureIcon $isDarkMode={isDarkMode}>
+                <FaRocket style={{ color: isDarkMode ? '#ffffff' : '#1f2937', fontSize: '1.125rem' }} />
+              </FeatureIcon>
+              <span>Instant delivery to WhatsApp</span>
+            </FeatureItem>
+            <FeatureItem $isDarkMode={isDarkMode}>
+              <FeatureIcon $isDarkMode={isDarkMode}>
+                <FaCheck style={{ color: isDarkMode ? '#ffffff' : '#1f2937', fontSize: '1.125rem' }} />
+              </FeatureIcon>
+              <span>Professional templates ready to use</span>
+            </FeatureItem>
+            <FeatureItem $isDarkMode={isDarkMode}>
+              <FeatureIcon $isDarkMode={isDarkMode}>
+                <FaShieldAlt style={{ color: isDarkMode ? '#ffffff' : '#1f2937', fontSize: '1.125rem' }} />
+              </FeatureIcon>
+              <span>Secure and encrypted delivery</span>
+            </FeatureItem>
+            <FeatureItem $isDarkMode={isDarkMode}>
+              <FeatureIcon $isDarkMode={isDarkMode}>
+                <FaClock style={{ color: isDarkMode ? '#ffffff' : '#1f2937', fontSize: '1.125rem' }} />
+              </FeatureIcon>
+              <span>Track delivery status in real-time</span>
+            </FeatureItem>
+          </FeaturesList>
+        </LeftContent>
+      </LeftSection>
+      <RightSection $isDarkMode={isDarkMode}>
+        <RightContent>
+          <FormHeader>
         <Title $isDarkMode={isDarkMode}>
-          <FaWhatsapp style={{ color: "#10b981" }} />
+          <FaWhatsapp style={{ color: isDarkMode ? "#ffffff" : "#1f2937" }} />
           Send WhatsApp Proposal
         </Title>
         <Subtitle $isDarkMode={isDarkMode}>
           Choose a proposal template to receive via WhatsApp.
         </Subtitle>
+          </FormHeader>
 
         {confirmationMessage && (
           <ConfirmationBanner $isDarkMode={isDarkMode}>
@@ -555,7 +897,8 @@ const WhatsAppProposalSelection = ({ chatbotId, apiBase, authenticatedPhone = nu
             </SendButton>
           </ButtonGroup>
         </FormContainer>
-      </Container>
+        </RightContent>
+      </RightSection>
     </PageWrapper>
   );
 };
