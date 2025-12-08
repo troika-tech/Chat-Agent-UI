@@ -8,21 +8,6 @@ import { FaGlobe, FaBolt, FaRobot } from "react-icons/fa";
 
 import InputArea from "./InputArea";
 
-const BackgroundPattern = styled.div`
-  position: absolute;
-  inset: 0;
-  opacity: ${(props) => (props.$isDarkMode ? 0.15 : 0.4)};
-  pointer-events: none;
-  z-index: 0;
-  background-image: radial-gradient(
-    circle,
-    ${(props) => (props.$isDarkMode ? "#a8a29e" : "#a8a29e")} 1px,
-    transparent 1px
-  );
-  background-size: 24px 24px;
-  background-position: 0 0;
-`;
-
 const WelcomeContainer = styled.div`
   display: flex;
 
@@ -1578,14 +1563,6 @@ const WelcomeSection = ({
   customAvatarUrl = null,
   customWelcomeText = null,
   uiConfigLoading = false,
-  // Sound props
-  soundEnabled = true,
-  toggleSound,
-  // Input placeholder props
-  inputPlaceholdersEnabled = false,
-  inputPlaceholders = ["Ask me anything...", "How can I help you?", "What would you like to know?"],
-  inputPlaceholderSpeed = 2.5,
-  inputPlaceholderAnimation = "fade",
 }) => {
   const { isDarkMode } = useTheme();
 
@@ -2280,7 +2257,6 @@ const WelcomeSection = ({
         $isDarkMode={isDarkMode}
         $isSocialMedia={activePage === "social-media"}
       >
-        <BackgroundPattern $isDarkMode={isDarkMode} />
         {activePage !== "social-media" && !uiConfigLoading && (
           <AvatarContainer>
             <AvatarCircle $isDarkMode={isDarkMode}>
@@ -2389,12 +2365,6 @@ const WelcomeSection = ({
               shouldShowAuth={shouldShowAuth}
               isAuthenticated={isAuthenticated}
               activePage={activePage}
-              soundEnabled={soundEnabled}
-              toggleSound={toggleSound}
-              inputPlaceholdersEnabled={inputPlaceholdersEnabled}
-              inputPlaceholders={inputPlaceholders}
-              inputPlaceholderSpeed={inputPlaceholderSpeed}
-              inputPlaceholderAnimation={inputPlaceholderAnimation}
             />
 
             {/* AI WhatsApp description removed */}

@@ -3,7 +3,6 @@ import styled from "styled-components";
 import { useTheme } from "../contexts/ThemeContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import PremiumFeatureModal from "./PremiumFeatureModal";
-import WhatsAppProposalModal from "./WhatsAppProposalModal";
 import axios from "axios";
 import {
   // Navigation & Basic
@@ -119,7 +118,6 @@ import {
   FaInstagram,
   FaLinkedin,
   FaFacebook,
-  FaTwitter,
   FaBuilding,
   FaFlickr,
   FaYoutube,
@@ -486,7 +484,7 @@ const CollapsedContent = styled.div`
   white-space: nowrap;
 `;
 
-const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigation, chatbotId, apiBase, authenticatedPhone }) => {
+const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigation, chatbotId, apiBase }) => {
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -511,10 +509,6 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [emailMode, setEmailMode] = useState("premium_modal");
   const [emailText, setEmailText] = useState("Send an Email");
-  const [whatsappProposalEnabled, setWhatsappProposalEnabled] = useState(false);
-  const [whatsappProposalText, setWhatsappProposalText] = useState("Send Proposal via WhatsApp");
-  const [whatsappProposalTemplates, setWhatsappProposalTemplates] = useState([]);
-  const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
   const [socialEnabled, setSocialEnabled] = useState(false);
   const [socialLinks, setSocialLinks] = useState([]);
   const [brandingEnabled, setBrandingEnabled] = useState(false);
@@ -661,9 +655,6 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
         setEmailEnabled(config.email_enabled || false);
         setEmailMode(config.email_mode || "premium_modal");
         setEmailText(config.email_text || "Send an Email");
-        setWhatsappProposalEnabled(config.whatsapp_proposal_enabled || false);
-        setWhatsappProposalText(config.whatsapp_proposal_text || "Send Proposal via WhatsApp");
-        setWhatsappProposalTemplates(config.whatsapp_proposal_templates || []);
         setSocialEnabled(config.social_enabled || false);
         setSocialLinks(config.social_links || []);
         setBrandingEnabled(config.branding_enabled || false);
@@ -795,16 +786,6 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
     }
   };
 
-  // Handle WhatsApp Proposal click
-  const handleWhatsAppProposalClick = () => {
-    // Navigate to WhatsApp proposals page
-    navigate('/whatsapp-proposals');
-    // Close sidebar on mobile
-    if (window.innerWidth <= 768) {
-      onClose();
-    }
-  };
-
   // Map platform to icon component
   const getPlatformIcon = (platform) => {
     switch (platform) {
@@ -822,14 +803,6 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
         return <FaWhatsapp />;
       case 'telegram':
         return <FaTelegram />;
-      case 'indiamart':
-        return <FaStore />;
-      case 'justdial':
-        return <FaBuilding />;
-      case 'tradeindia':
-        return <FaShoppingCart />;
-      case 'exportersindia':
-        return <FaGlobe />;
       default:
         return <FaLink />;
     }
@@ -848,10 +821,6 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
       pinterest: '#BD081C',
       tiktok: '#000000',
       snapchat: '#FFFC00',
-      indiamart: '#FF6B00',
-      justdial: '#FF6B35',
-      tradeindia: '#007BFF',
-      exportersindia: '#28A745',
       custom: isDarkMode ? '#9ca3af' : '#6b7280'
     };
     return colors[platform] || colors.custom;
@@ -1297,22 +1266,6 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
               </NavItem>
             )}
 
-            {/* WhatsApp Proposal */}
-            {!sidebarConfigLoading && sidebarEnabled && whatsappProposalEnabled && whatsappProposalTemplates.length > 0 && (
-              <NavItem
-                $isDarkMode={isDarkMode}
-                $isCollapsed={isCollapsed && !isMobile}
-                onClick={handleWhatsAppProposalClick}
-                className="nav-item"
-                title={isCollapsed && !isMobile ? whatsappProposalText : ''}
-              >
-                <NavIcon>
-                  <FaWhatsapp />
-                </NavIcon>
-                {(!isCollapsed || isMobile) && <NavText>{whatsappProposalText}</NavText>}
-              </NavItem>
-            )}
-
             {/* Custom Navigation Items */}
             {!sidebarConfigLoading && sidebarEnabled && customNavEnabled && customNavItems.length > 0 && customNavItems.map((item) => (
               <NavItem
@@ -1347,10 +1300,6 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                                      link.platform === 'pinterest' ? 'Pinterest' :
                                      link.platform === 'tiktok' ? 'TikTok' :
                                      link.platform === 'snapchat' ? 'Snapchat' :
-                                     link.platform === 'indiamart' ? 'IndiaMART' :
-                                     link.platform === 'justdial' ? 'JustDial' :
-                                     link.platform === 'tradeindia' ? 'TradeIndia' :
-                                     link.platform === 'exportersindia' ? 'ExportersIndia' :
                                      'Social Media';
                 
                 return (
@@ -1411,14 +1360,6 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
       <PremiumFeatureModal 
         isOpen={isPremiumModalOpen} 
         onClose={() => setIsPremiumModalOpen(false)} 
-      />
-      <WhatsAppProposalModal
-        isOpen={isProposalModalOpen}
-        onClose={() => setIsProposalModalOpen(false)}
-        chatbotId={chatbotId}
-        apiBase={apiBase}
-        templates={whatsappProposalTemplates}
-        authenticatedPhone={authenticatedPhone}
       />
     </>
   );

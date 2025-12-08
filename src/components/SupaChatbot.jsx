@@ -35,7 +35,6 @@ import OtpMessageBubble from "./OtpMessageBubble";
 import StreamingMessage from "./StreamingMessage";
 import InputArea from "./InputArea";
 import ProfileDropdown from "./ProfileDropdown";
-import NotificationsDropdown from "./NotificationsDropdown";
 
 // Import styles
 import { Wrapper, Overlay, Chatbox, ChatContainer, MessagesContainer, MessagesInnerContainer, MainContentArea, ChatTitle } from "../styles/MainStyles";
@@ -55,13 +54,12 @@ import useStreamingChat from "../hooks/useStreamingChat";
 // Import utils
 import { getTimeBasedGreeting } from "../utils/timeUtils";
 import { isMobileDevice, getDeviceInfo, hapticFeedback, debounce } from "../utils/mobileUtils";
-import { playSendSound, playReceiveSound } from "../utils/soundUtils";
 
 // Import services
 import frontendInactivityManager from "../services/frontendInactivityManager";
 import { getAuthConfig, getIntentConfig, getTranscriptConfig, sendProposal, getZohoConfig, captureLeadToZoho } from "../services/api";
 
-const SupaChatbotInner = ({ chatbotId, apiBase }) => {
+const SupaChatbotInner = ({ chatbotId, apiBase, streamRoute }) => {
   const { isDarkMode } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
@@ -113,11 +111,6 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   const [assistantDisplayName, setAssistantDisplayName] = useState(null);
   const [assistantLogoUrl, setAssistantLogoUrl] = useState(null);
   const [uiConfigLoading, setUiConfigLoading] = useState(true); // Track if UI config is being loaded
-  // Input placeholder configuration
-  const [inputPlaceholdersEnabled, setInputPlaceholdersEnabled] = useState(false);
-  const [inputPlaceholders, setInputPlaceholders] = useState(["Ask me anything...", "How can I help you?", "What would you like to know?"]);
-  const [inputPlaceholderSpeed, setInputPlaceholderSpeed] = useState(2.5);
-  const [inputPlaceholderAnimation, setInputPlaceholderAnimation] = useState("fade");
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [showServiceSelection, setShowServiceSelection] = useState(false);
@@ -253,16 +246,6 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   // State for manual streaming response (for demo auth flow)
   const [manualStreamingResponse, setManualStreamingResponse] = useState('');
 
-  // Sound notification state
-  const [soundEnabled, setSoundEnabled] = useState(() => {
-    try {
-      const saved = localStorage.getItem('chatbot_sound_enabled');
-      return saved !== null ? JSON.parse(saved) : true; // Default to enabled
-    } catch (error) {
-      return true;
-    }
-  });
-
   // Route-based tab detection
   const getCurrentTab = useCallback(() => {
     const path = location.pathname;
@@ -337,6 +320,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
     apiBase,
     chatbotId,
     sessionId,
+    streamRoute, // Custom stream route (defaults to '/troika/conversation/stream' in hook)
     phone: authenticatedPhoneRef.current || userInfo?.phone || phone || userPhone,
     name: userName,
     enableTTS: false, // TEMPORARILY DISABLED TTS
@@ -366,10 +350,6 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
 
 
       addMessageToTab(targetTab, botMessage);
-      // Play receive sound after a short delay
-      setTimeout(() => {
-        playReceiveSound(soundEnabled);
-      }, 100);
       setCurrentStreamingMessageId(null);
       setIsTyping(false);
 
@@ -719,20 +699,6 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       if (key.startsWith('chatHistory_')) {
         localStorage.removeItem(key);
       }
-    });
-  }, []);
-
-  // Toggle sound notifications
-  const toggleSound = useCallback(() => {
-    setSoundEnabled(prev => {
-      const newValue = !prev;
-      console.log('Sound toggled:', newValue ? 'ON' : 'OFF');
-      try {
-        localStorage.setItem('chatbot_sound_enabled', JSON.stringify(newValue));
-      } catch (error) {
-        console.error('Error saving sound preference:', error);
-      }
-      return newValue;
     });
   }, []);
 
@@ -1360,10 +1326,6 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
     setCustomWelcomeText(null);
     setAssistantDisplayName(null);
     setAssistantLogoUrl(null);
-    setInputPlaceholdersEnabled(false);
-    setInputPlaceholders(["Ask me anything...", "How can I help you?", "What would you like to know?"]);
-    setInputPlaceholderSpeed(2.5);
-    setInputPlaceholderAnimation("fade");
 
     const fetchUIConfig = async () => {
       try {
@@ -1420,20 +1382,6 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         } else {
           document.title = "Ai Assistant";
           console.log('[UI Config] ⚠️ Using default browser tab title');
-        }
-
-        // Update input placeholder configuration
-        if (config && config.input_placeholders_enabled !== undefined) {
-          setInputPlaceholdersEnabled(config.input_placeholders_enabled);
-        }
-        if (config && config.input_placeholders && Array.isArray(config.input_placeholders)) {
-          setInputPlaceholders(config.input_placeholders);
-        }
-        if (config && config.input_placeholder_speed !== undefined) {
-          setInputPlaceholderSpeed(config.input_placeholder_speed);
-        }
-        if (config && config.input_placeholder_animation) {
-          setInputPlaceholderAnimation(config.input_placeholder_animation);
         }
 
         // Update favicon
@@ -2203,7 +2151,8 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
           console.log('   - Phone being sent:', currentAuthValue);
           // Send directly to backend with authenticated phone
           // We can't use sendStreamingMessage because the hook hasn't re-rendered with new phone yet
-          const streamUrl = `${apiBase}/troika/intelligent-chat/stream`;
+          // Using custom Troika Conversation route
+          const streamUrl = `${apiBase}/troika/conversation/stream`;
           const requestData = {
             chatbotId,
             query: messageToSend,
@@ -2256,10 +2205,6 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                       timestamp: new Date(),
                     };
                     addMessageToTab(currentTab, botMessage);
-                    // Play receive sound after a short delay
-                    setTimeout(() => {
-                      playReceiveSound(soundEnabled);
-                    }, 100);
                   }
                   setIsTyping(false);
                   setCurrentStreamingMessageId(null);
@@ -3260,8 +3205,6 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       if (!skipAddingUserMessage.current) {
         const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
         addMessageToTab(currentTab, userMessage);
-        // Play send sound
-        playSendSound(soundEnabled);
       } else {
         skipAddingUserMessage.current = false; // Reset flag
       }
@@ -3492,10 +3435,6 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
             suggestions: action.suggestions || []
           };
           addMessageToTab(currentTab, botMessage);
-          // Play receive sound after a short delay
-          setTimeout(() => {
-            playReceiveSound(soundEnabled);
-          }, 100);
           setIsTyping(false);
           
           // Increment bot message count
@@ -5162,41 +5101,41 @@ AI Website is built for instant replies, 24×7.<br>
     }
   }, [handleSendMessage, getCurrentTab, addMessageToTab, handleTabNavigation]);
 
-  // Voice recording handlers - DISABLED
+  // Voice recording handlers
   const handleMicClick = () => {
-    // Microphone functionality disabled - no-op
-    return;
+    // Allow click on both mobile and desktop as fallback
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording((text) => {
+        handleSendMessage(text);
+      }).catch((error) => {
+        toast.error(error.message || "Voice recording failed. Please ensure microphone permissions are granted.");
+      });
+    }
   };
 
-  // Simplified touch handlers - DISABLED
+  // Simplified touch handlers - just use click behavior (start/stop toggle)
   const handleMicTouchStart = useCallback(
     (e) => {
-      // Microphone functionality disabled - no-op
-      e.preventDefault();
-      e.stopPropagation();
+      // No-op: Let onClick handle it
     },
     []
   );
 
   const handleMicTouchEnd = useCallback(
     (e) => {
-      // Microphone functionality disabled - no-op
-      e.preventDefault();
-      e.stopPropagation();
+      // No-op: Let onClick handle it
     },
     []
   );
 
   const handleMicMouseDown = useCallback((e) => {
-    // Microphone functionality disabled - no-op
-    e.preventDefault();
-    e.stopPropagation();
+    // No-op: Let onClick handle it
   }, []);
 
   const handleMicMouseUp = useCallback((e) => {
-    // Microphone functionality disabled - no-op
-    e.preventDefault();
-    e.stopPropagation();
+    // No-op: Let onClick handle it
   }, []);
 
   // Sidebar and page management handlers
@@ -5281,7 +5220,6 @@ AI Website is built for instant replies, 24×7.<br>
             onTabNavigation={handleTabNavigation}
             chatbotId={chatbotId}
             apiBase={apiBase}
-            authenticatedPhone={isAuthenticated && userInfo?.phone ? userInfo.phone : null}
           />
 
           {/* Main Content Area */}
@@ -5322,11 +5260,7 @@ AI Website is built for instant replies, 24×7.<br>
                   )}
                   {/* <span style={{ flexShrink: 0 }}>SP University Pune</span> */}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                  <NotificationsDropdown 
-                    soundEnabled={soundEnabled}
-                    toggleSound={toggleSound}
-                  />
+                <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                   <ProfileDropdown />
                 </div>
               </ChatTitle>
@@ -5411,13 +5345,7 @@ AI Website is built for instant replies, 24×7.<br>
               isAuthenticated={isAuthenticated}
               customAvatarUrl={customAvatarUrl}
               customWelcomeText={customWelcomeText}
-              soundEnabled={soundEnabled}
-              toggleSound={toggleSound}
               uiConfigLoading={uiConfigLoading}
-              inputPlaceholdersEnabled={inputPlaceholdersEnabled}
-              inputPlaceholders={inputPlaceholders}
-              inputPlaceholderSpeed={inputPlaceholderSpeed}
-              inputPlaceholderAnimation={inputPlaceholderAnimation}
             />
         ) : null}
                 
@@ -5529,16 +5457,10 @@ AI Website is built for instant replies, 24×7.<br>
                   showInlineAuthInput={showInlineAuthInput || authPhoneState || authOtpState}
                   authPhoneState={authPhoneState}
                   authOtpState={authOtpState}
-                  soundEnabled={soundEnabled}
-                  toggleSound={toggleSound}
                   isWelcomeMode={false}
                   currentlyPlaying={currentlyPlaying}
                   shouldShowAuth={shouldShowAuth}
                   isAuthenticated={isAuthenticated}
-                  inputPlaceholdersEnabled={inputPlaceholdersEnabled}
-                  inputPlaceholders={inputPlaceholders}
-                  inputPlaceholderSpeed={inputPlaceholderSpeed}
-                  inputPlaceholderAnimation={inputPlaceholderAnimation}
                 />
                 )}
               </ChatContainer>

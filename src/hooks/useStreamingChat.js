@@ -8,6 +8,7 @@ import { WebAudioPlayer } from '../utils/WebAudioPlayer';
  * @param {string} options.apiBase - Base API URL
  * @param {string} options.chatbotId - Chatbot ID
  * @param {string} options.sessionId - Session ID
+ * @param {string} options.streamRoute - Custom stream route (default: '/troika/conversation/stream')
  * @param {boolean} options.enableTTS - Enable text-to-speech
  * @param {boolean} options.isMuted - Audio mute state
  * @param {Function} options.onComplete - Callback when streaming completes
@@ -21,6 +22,7 @@ export function useStreamingChat(options) {
     sessionId,
     phone,
     name,
+    streamRoute = '/troika/conversation/stream', // Default to Troika route
     enableTTS = true,
     isMuted = false,
     onComplete,
@@ -124,8 +126,8 @@ export function useStreamingChat(options) {
         audioPlayerRef.current.stop();
       }
 
-      // Create streaming endpoint URL
-      const streamUrl = `${apiBase}/troika/intelligent-chat/stream`;
+      // Create streaming endpoint URL - Using configurable route
+      const streamUrl = `${apiBase}${streamRoute}`;
 
       // Determine final user data to send
       // Priority: 1. Passed userData, 2. Refs (updated by useEffect), 3. Original props

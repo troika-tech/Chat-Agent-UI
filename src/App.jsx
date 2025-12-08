@@ -1,16 +1,15 @@
 import SupaChatbot from "./components/SupaChatbot"
 import ScheduleMeeting from "./components/ScheduleMeeting"
 import EmailServicesPage from "./components/EmailServicesPage"
-import WhatsAppProposalsPage from "./components/WhatsAppProposalsPage"
 import React from "react"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { ThemeProvider } from "./contexts/ThemeContext"
 import { AuthProvider } from "./contexts/AuthContext"
 
 // Constants for chatbot configuration
-const CHATBOT_ID = "692949c1b8c1bfbed87e7dff"
-//const API_BASE = "https://chat-api.0804.in/api"
-const API_BASE = "http://localhost:5000/api"
+const CHATBOT_ID = "6933f2590d8138720f46ecb7"
+const API_BASE = "https://chat-api.0804.in/api"
+// const API_BASE = "http://localhost:5000/api"
 
 // Development mode - set to true to bypass authentication during development
 // COMMENTED OUT: Using inline authentication after 2 bot messages instead of full-screen auth
@@ -168,7 +167,6 @@ function App() {
               <Route path="/get-quote" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
               <Route path="/schedule-meeting" element={<ScheduleMeeting chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
               <Route path="/email-services" element={<EmailServicesPage chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-              <Route path="/whatsapp-proposals" element={<WhatsAppProposalsPage chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
               <Route path="/book-call" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
             </Routes>
           </ErrorBoundary>

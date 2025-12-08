@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
-import { FiArrowUp, FiMic, FiSquare, FiSend } from "react-icons/fi";
+import { FiArrowUp, FiMic, FiSquare, FiVolume2, FiVolumeX, FiSend } from "react-icons/fi";
 import { IoSend } from "react-icons/io5";
 import { useTheme } from "../contexts/ThemeContext";
 import ServiceSuggestions from "./ServiceSuggestions";
@@ -102,7 +102,6 @@ const ChatInput = styled.input`
   &::placeholder {
     color: ${props => props.$isDarkMode ? '#a1a1aa' : '#9ca3af'};
     font-weight: 400;
-    transition: opacity 0.3s ease, transform 0.3s ease;
   }
 
   &:hover {
@@ -372,6 +371,23 @@ const ActionButton = styled.button`
       font-size: clamp(16px, 2vw, 18px);
       width: clamp(16px, 2vw, 18px);
       height: clamp(16px, 2vw, 18px);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+    filter: blur(0.5px);
+    
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+    
+    &:active {
+      transform: none;
     }
   }
 `;
@@ -953,13 +969,7 @@ const InputArea = ({
   showInlineAuthInput = false,
   authPhoneState = false,
   authOtpState = false,
-  activePage,
-  soundEnabled = true,
-  toggleSound,
-  inputPlaceholdersEnabled = false,
-  inputPlaceholders = ["Ask me anything...", "How can I help you?", "What would you like to know?"],
-  inputPlaceholderSpeed = 2.5,
-  inputPlaceholderAnimation = "fade"
+  activePage
 }) => {
   const { isDarkMode } = useTheme();
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -969,14 +979,6 @@ const InputArea = ({
   // Disable input when typing OR when authentication is required
   // Allow typing when asking for phone/OTP in chat flow
   const shouldDisable = isTyping || (showInlineAuth && !verified && !showInlineAuthInput);
-  
-  // Rotating placeholder state
-  const [currentPlaceholderIndex, setCurrentPlaceholderIndex] = useState(0);
-  const [displayedPlaceholder, setDisplayedPlaceholder] = useState("");
-  const [isTypingPlaceholder, setIsTypingPlaceholder] = useState(false);
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const placeholderIntervalRef = useRef(null);
-  const typewriterTimeoutRef = useRef(null);
 
   const handleQuestionClick = (question) => {
     // Prevent double-sending
@@ -1024,117 +1026,8 @@ const InputArea = ({
       if (questionTimeoutRef.current) {
         clearTimeout(questionTimeoutRef.current);
       }
-      if (placeholderIntervalRef.current) {
-        clearInterval(placeholderIntervalRef.current);
-      }
-      if (typewriterTimeoutRef.current) {
-        clearTimeout(typewriterTimeoutRef.current);
-      }
     };
   }, []);
-
-  // Rotating placeholder logic
-  useEffect(() => {
-    // Don't rotate if disabled, typing, in auth flow, or input is focused
-    if (!inputPlaceholdersEnabled || isTyping || shouldDisable || isInputFocused || message.length > 0) {
-      // Use static placeholder
-      return;
-    }
-
-    // Check if we have valid placeholders
-    if (!inputPlaceholders || inputPlaceholders.length < 3) {
-      return;
-    }
-
-    const currentPlaceholder = inputPlaceholders[currentPlaceholderIndex];
-    
-    if (inputPlaceholderAnimation === "typewriter") {
-      // Typewriter effect
-      setIsTypingPlaceholder(true);
-      setDisplayedPlaceholder("");
-      let charIndex = 0;
-      
-      const typeNextChar = () => {
-        if (charIndex < currentPlaceholder.length) {
-          setDisplayedPlaceholder(currentPlaceholder.substring(0, charIndex + 1));
-          charIndex++;
-          typewriterTimeoutRef.current = setTimeout(typeNextChar, 50);
-        } else {
-          setIsTypingPlaceholder(false);
-          // Wait before switching to next placeholder
-          typewriterTimeoutRef.current = setTimeout(() => {
-            setCurrentPlaceholderIndex((prev) => (prev + 1) % inputPlaceholders.length);
-          }, inputPlaceholderSpeed * 1000);
-        }
-      };
-      
-      typeNextChar();
-    } else {
-      // Fade or slide - just switch placeholders
-      setDisplayedPlaceholder(currentPlaceholder);
-      
-      placeholderIntervalRef.current = setInterval(() => {
-        setCurrentPlaceholderIndex((prev) => (prev + 1) % inputPlaceholders.length);
-      }, inputPlaceholderSpeed * 1000);
-    }
-
-    return () => {
-      if (placeholderIntervalRef.current) {
-        clearInterval(placeholderIntervalRef.current);
-      }
-      if (typewriterTimeoutRef.current) {
-        clearTimeout(typewriterTimeoutRef.current);
-      }
-    };
-  }, [
-    inputPlaceholdersEnabled,
-    inputPlaceholders,
-    currentPlaceholderIndex,
-    inputPlaceholderSpeed,
-    inputPlaceholderAnimation,
-    isTyping,
-    shouldDisable,
-    isInputFocused,
-    message
-  ]);
-
-  // Reset placeholder index when placeholders change
-  useEffect(() => {
-    if (inputPlaceholders && inputPlaceholders.length > 0) {
-      setCurrentPlaceholderIndex(0);
-      setDisplayedPlaceholder(inputPlaceholders[0]);
-    }
-  }, [inputPlaceholders]);
-
-  // Get the placeholder text to display
-  const getPlaceholderText = () => {
-    // Priority: auth states > typing > rotating placeholder > default
-    if (isTyping) {
-      return "Thinking...";
-    }
-    if (showInlineAuth && !verified && showInlineAuthInput && authOtpState) {
-      return "Enter 6-digit OTP...";
-    }
-    if (showInlineAuth && !verified && showInlineAuthInput) {
-      return "Type your mobile number...";
-    }
-    if (showInlineAuth && !verified) {
-      return "Please verify to continue...";
-    }
-    
-    // Use rotating placeholder if enabled and conditions are met
-    if (inputPlaceholdersEnabled && !isInputFocused && message.length === 0 && !shouldDisable) {
-      if (inputPlaceholderAnimation === "typewriter" && displayedPlaceholder) {
-        return displayedPlaceholder;
-      }
-      if (inputPlaceholders && inputPlaceholders.length > 0) {
-        return inputPlaceholders[currentPlaceholderIndex] || "Ask me anything...";
-      }
-    }
-    
-    // Default static placeholder
-    return "Ask me anything...";
-  };
 
   return (
     <InputContainer $isDarkMode={isDarkMode} $isWelcomeMode={isWelcomeMode}>
@@ -1186,17 +1079,19 @@ const InputArea = ({
             }
             handleKeyPress(e);
           }}
-          onFocus={() => {
-            setShowSuggestions(false);
-            setIsInputFocused(true);
-          }}
-          onBlur={() => {
-            setTimeout(() => {
-              setShowSuggestions(false);
-              setIsInputFocused(false);
-            }, 200);
-          }}
-          placeholder={getPlaceholderText()}
+          onFocus={() => setShowSuggestions(false)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          placeholder={
+            isTyping
+              ? "Thinking..."
+              : (showInlineAuth && !verified && showInlineAuthInput && authOtpState)
+                ? "Enter 6-digit OTP..."
+              : (showInlineAuth && !verified && showInlineAuthInput)
+                ? "Please enter your WhatsApp Number"
+              : (showInlineAuth && !verified)
+                ? "Please enter your WhatsApp Number"
+                : "Ask me anything..."
+          }
           disabled={shouldDisable}
           style={{
             opacity: shouldDisable ? 0.6 : 1,
@@ -1206,43 +1101,35 @@ const InputArea = ({
         <InputButtons>
           <ActionButton
             $variant="secondary"
-            $isRecording={false}
+            $isRecording={isRecording}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleMicClick();
             }}
             onTouchStart={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleMicTouchStart(e);
             }}
             onTouchEnd={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleMicTouchEnd(e);
             }}
             onMouseDown={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleMicMouseDown(e);
             }}
             onMouseUp={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleMicMouseUp(e);
             }}
             disabled={true}
-            title="Microphone feature is disabled"
+            title={isRecording ? "Stop recording" : (isMobile ? "Tap or hold to record" : "Click to record")}
             style={{
-              background: 'transparent',
-              color: '#9ca3af',
-              opacity: 0.5,
-              cursor: 'not-allowed',
-              pointerEvents: 'auto'
+              background: isRecording ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
+              color: isRecording ? '#ef4444' : '#6b7280'
             }}
           >
-            <FiMic />
+            {isRecording ? <FiSquare /> : <FiMic />}
           </ActionButton>
           <SendButton
             onClick={(e) => {

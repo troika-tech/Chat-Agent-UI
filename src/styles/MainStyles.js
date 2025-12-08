@@ -386,23 +386,6 @@ export const MessagesContainer = styled.div`
   width: 100%;
   max-width: 100%;
 
-  /* Background pattern overlay */
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    opacity: ${props => props.$isDarkMode ? 0.15 : 0.4};
-    pointer-events: none;
-    z-index: 0;
-    background-image: radial-gradient(
-      circle,
-      #a8a29e 1px,
-      transparent 1px
-    );
-    background-size: 24px 24px;
-    background-position: 0 0;
-  }
-
   /* Responsive padding with fluid units */
   @media (max-width: 1024px) {
     padding: clamp(0.75rem, 1.5vw, 1.25rem);
@@ -447,7 +430,6 @@ export const MessagesInnerContainer = styled.div`
   min-height: 0;
   position: relative;
   background: transparent;
-  z-index: 1;
   
   /* Responsive max-width */
   @media (max-width: 1024px) {

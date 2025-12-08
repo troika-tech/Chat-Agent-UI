@@ -214,30 +214,6 @@ const ServiceSelection = ({ chatbotId, apiBase }) => {
   const [emailError, setEmailError] = useState('');
   const [confirmationMessage, setConfirmationMessage] = useState('');
 
-  // Helper function to strip HTML tags for preview text
-  const stripHtmlTags = (html) => {
-    if (!html) return '';
-    // Use regex to remove HTML tags as a fallback if document is not available
-    if (typeof document === 'undefined') {
-      return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-    }
-    try {
-      const tmp = document.createElement('DIV');
-      tmp.innerHTML = html;
-      return tmp.textContent || tmp.innerText || '';
-    } catch (e) {
-      // Fallback to regex if DOM manipulation fails
-      return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
-    }
-  };
-
-  // Helper function to get plain text preview
-  const getPlainTextPreview = (html, maxLength = 200) => {
-    const plainText = stripHtmlTags(html);
-    if (plainText.length <= maxLength) return plainText;
-    return plainText.substring(0, maxLength).trim() + '...';
-  };
-
   // Fetch email templates from backend
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -270,7 +246,7 @@ const ServiceSelection = ({ chatbotId, apiBase }) => {
             id: t._id,
             name: t.template_name,
             desc: t.email_subject,
-            long: getPlainTextPreview(t.email_body, 200), // Use plain text for preview
+            long: t.email_body.substring(0, 200) + (t.email_body.length > 200 ? '...' : ''),
             template: t // Keep full template data
           }));
           setTemplates(mappedTemplates);
