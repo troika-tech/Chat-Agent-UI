@@ -9,10 +9,10 @@ import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 import { useLocation, useNavigate } from "react-router-dom";
+import { FaBars } from "react-icons/fa";
 
 // Import components
 import DeviceFrameComponent from "./DeviceFrame";
-import ChatHeader from "./ChatHeader";
 import MessageBubbleComponent from "./MessageBubble";
 import TypingIndicator from "./TypingIndicator";
 import VoiceInputIndicatorComponent from "./VoiceInputIndicator";
@@ -34,9 +34,11 @@ import AuthMessageBubble from "./AuthMessageBubble";
 import OtpMessageBubble from "./OtpMessageBubble";
 import StreamingMessage from "./StreamingMessage";
 import InputArea from "./InputArea";
+import ProfileDropdown from "./ProfileDropdown";
+import NotificationsDropdown from "./NotificationsDropdown";
 
 // Import styles
-import { Wrapper, Overlay, AnimatedBlob, Chatbox, ChatContainer, MessagesContainer, MessagesInnerContainer, MainContentArea } from "../styles/MainStyles";
+import { Wrapper, Overlay, Chatbox, ChatContainer, MessagesContainer, MessagesInnerContainer, MainContentArea, ChatTitle } from "../styles/MainStyles";
 import GlobalStyle from "../styles/GlobalStyles";
 
 // Import theme
@@ -53,9 +55,11 @@ import useStreamingChat from "../hooks/useStreamingChat";
 // Import utils
 import { getTimeBasedGreeting } from "../utils/timeUtils";
 import { isMobileDevice, getDeviceInfo, hapticFeedback, debounce } from "../utils/mobileUtils";
+import { playSendSound, playReceiveSound } from "../utils/soundUtils";
 
 // Import services
 import frontendInactivityManager from "../services/frontendInactivityManager";
+import { getAuthConfig, getIntentConfig, getTranscriptConfig, sendProposal, getZohoConfig, captureLeadToZoho } from "../services/api";
 
 const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   const { isDarkMode } = useTheme();
@@ -80,6 +84,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   const [resendIntervalId, setResendIntervalId] = useState(null);
   const [isPhoneValid, setIsPhoneValid] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   const [needsAuth, setNeedsAuth] = useState(false);
   const [showAuthScreen, setShowAuthScreen] = useState(false);
@@ -93,12 +98,26 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   const [showInlineAuthInput, setShowInlineAuthInput] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
   const [currentAuthValue, setCurrentAuthValue] = useState('');
+  const [authPhoneState, setAuthPhoneState] = useState(false); // Track if asking for phone in chat
+  const [authOtpState, setAuthOtpState] = useState(false); // Track if asking for OTP in chat
   const [chatbotLogo, setChatbotLogo] = useState(
     "https://raw.githubusercontent.com/troika-tech/Asset/refs/heads/main/Supa%20Agent%20new.png"
   );
   const [finalGreetingReady, setFinalGreetingReady] = useState(false);
   const [ttsGenerationInProgress, setTtsGenerationInProgress] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState(getTimeBasedGreeting());
+  
+  // UI Configuration state (custom avatar and welcome text from admin)
+  const [customAvatarUrl, setCustomAvatarUrl] = useState(null);
+  const [customWelcomeText, setCustomWelcomeText] = useState(null);
+  const [assistantDisplayName, setAssistantDisplayName] = useState(null);
+  const [assistantLogoUrl, setAssistantLogoUrl] = useState(null);
+  const [uiConfigLoading, setUiConfigLoading] = useState(true); // Track if UI config is being loaded
+  // Input placeholder configuration
+  const [inputPlaceholdersEnabled, setInputPlaceholdersEnabled] = useState(false);
+  const [inputPlaceholders, setInputPlaceholders] = useState(["Ask me anything...", "How can I help you?", "What would you like to know?"]);
+  const [inputPlaceholderSpeed, setInputPlaceholderSpeed] = useState(2.5);
+  const [inputPlaceholderAnimation, setInputPlaceholderAnimation] = useState("fade");
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [showServiceSelection, setShowServiceSelection] = useState(false);
@@ -137,6 +156,10 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   const pendingMessageAfterAuth = useRef(null);
   const skipAddingUserMessage = useRef(false);
   const authenticatedPhoneRef = useRef(null); // Store authenticated phone for immediate use
+  const isSendingMessageRef = useRef(false); // Prevent duplicate message sends
+  const lastSentMessageRef = useRef(null); // Track last sent message to prevent duplicates
+  const lastSentTimeRef = useRef(0); // Track when last message was sent
+  const phonePromptSentRef = useRef(false); // Track if phone prompt was already sent
 
   // Callback to handle auth screen display after TTS completes
   const handleAudioEnded = useCallback((messageIndex) => {
@@ -170,7 +193,56 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
     verifyOtp,
     logout,
     resendOtp
-  } = useAuthentication(apiBase);
+  } = useAuthentication(apiBase, chatbotId);
+
+  // Auth configuration state
+  const [authConfig, setAuthConfig] = useState({
+    auth_enabled: false,
+    auth_provider: 'aisensy',
+    auth_trigger_message_count: 1,
+    auth_phone_prompt_text: "To continue chat, please type your whatsapp number.",
+    auth_otp_prompt_text: "I've sent an OTP to your whatsapp number. Please enter the 6-digit OTP code.",
+    auth_success_text: "Great! You're verified",
+  });
+
+  // Intent configuration state
+  const [intentConfig, setIntentConfig] = useState({
+    enabled: false,
+    keywords: [],
+    confirmation_prompt_text: "Would you like me to send the proposal to your WhatsApp number?",
+    success_message: "✅ Proposal sent to your WhatsApp number!",
+    toast_message: "Proposal sent successfully! 📱",
+  });
+  const [intentConfigLoading, setIntentConfigLoading] = useState(false);
+
+  // Proposal confirmation state
+  const [proposalConfirmationPending, setProposalConfirmationPending] = useState(false);
+  const [proposalQuestionTime, setProposalQuestionTime] = useState(null);
+
+  // Zoho lead collection state
+  const [zohoConfig, setZohoConfig] = useState({
+    enabled: false,
+    capture_intent_keywords: [],
+    required_fields: ['name', 'phone', 'email'],
+    optional_fields: ['company'],
+    name_prompt_text: "Great! What's your name?",
+    phone_prompt_text: "What's your phone number?",
+    email_prompt_text: "What's your email address?",
+    company_prompt_text: "Which company are you from? (optional)",
+    success_message: "✅ Thank you! We've saved your details. Our team will reach out soon!",
+  });
+  const [zohoConfigLoading, setZohoConfigLoading] = useState(false);
+  
+  // Lead collection flow state
+  const [leadCollectionState, setLeadCollectionState] = useState(null);
+  // States: null | 'INTENT_DETECTED' | 'ASKING_NAME' | 'ASKING_PHONE' | 'ASKING_EMAIL' | 'ASKING_COMPANY' | 'COLLECTING' | 'COMPLETED'
+  const [collectedLeadData, setCollectedLeadData] = useState({
+    name: null,
+    phone: null,
+    email: null,
+    company: null,
+    message: null,
+  });
 
   // State for tracking the currently streaming message
   const [currentStreamingMessageId, setCurrentStreamingMessageId] = useState(null);
@@ -181,103 +253,15 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   // State for manual streaming response (for demo auth flow)
   const [manualStreamingResponse, setManualStreamingResponse] = useState('');
 
-  // Streaming hook with proper options
-  const {
-    streamingResponse,
-    isStreaming,
-    error: streamingError,
-    audioPlaying,
-    metrics,
-    sendMessage: sendStreamingMessage,
-    stopStreaming,
-    retry,
-    pauseAudio,
-    resumeAudio,
-    getAudioState,
-  } = useStreamingChat({
-    apiBase,
-    chatbotId,
-    sessionId,
-    phone: authenticatedPhoneRef.current || userInfo?.phone || phone || userPhone,
-    name: userName,
-    enableTTS: false, // TEMPORARILY DISABLED TTS
-    isMuted,
-    onComplete: (data) => {
-
-      // Add the final message to chat history
-      const targetTab = messageOriginTab || getCurrentTab();
-
-      const botMessage = {
-        sender: "bot",
-        text: data.fullAnswer,
-        timestamp: new Date(),
-        metadata: data.metadata, // Include metadata for special actions like Calendly
-      };
-
-
-      addMessageToTab(targetTab, botMessage);
-      setCurrentStreamingMessageId(null);
-      setIsTyping(false);
-
-      // Increment bot message count
-      incrementBotMessageCount();
-
-      // Clear the message origin tab after bot response
-      setMessageOriginTab(null);
-
-      // ===== SMART USER COLLECTION: Ask for phone after 3rd message =====
-      // Get current message count from localStorage (since state updates are async)
-      let currentMessageCount = userMessageCount;
-      if (sessionId && chatbotId) {
-        try {
-          const key = `supa_user_message_count:${chatbotId}:${sessionId}`;
-          const stored = localStorage.getItem(key);
-          if (stored) {
-            currentMessageCount = parseInt(stored, 10);
-          }
-        } catch (error) {
-          // Fallback to state value
-        }
-      }
-      
-      // Ask for phone ONLY after the 3rd user message (if we have name but not phone)
-      if (currentMessageCount === 3 && userName && !userPhone) {
-        // Transition to ASKING_PHONE state if not already
-        if (userCollectionState !== 'ASKING_PHONE') {
-          setUserCollectionState('ASKING_PHONE');
-        }
-        setTimeout(() => {
-          const phonePrompt = {
-            sender: "bot",
-            text: USER_COLLECTION_PROMPTS.thankName(userName),
-            timestamp: new Date()
-          };
-          addMessageToTab(targetTab, phonePrompt);
-        }, 800);
-      }
-
-      // Scroll to bottom after message is added
-      setTimeout(() => {
-        if (endOfMessagesRef.current) {
-          endOfMessagesRef.current.scrollIntoView({
-            behavior: 'smooth',
-            block: 'end'
-          });
-        }
-      }, 100);
-    },
-    onError: (error) => {
-      console.error('❌ Streaming error:', error);
-      setCurrentStreamingMessageId(null);
-      setIsTyping(false);
-      toast.error('Failed to get response. Please try again.');
-    },
+  // Sound notification state
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem('chatbot_sound_enabled');
+      return saved !== null ? JSON.parse(saved) : true; // Default to enabled
+    } catch (error) {
+      return true;
+    }
   });
-
-  // Constants
-  const AUTH_GATE_KEY = (sid, bot) => `supa_auth_gate:${bot}:${sid}`;
-  const SESSION_STORE_KEY = "chatbot_user_phone";
-  const USER_MESSAGE_COUNT_KEY = (sid, bot) => `supa_user_message_count:${bot}:${sid}`;
 
   // Route-based tab detection
   const getCurrentTab = useCallback(() => {
@@ -286,7 +270,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
     return path.substring(1); // Remove leading slash
   }, [location.pathname]);
 
-  // Tab-specific chat history helper functions
+  // Tab-specific chat history helper functions (defined before useStreamingChat to avoid initialization errors)
   const getTabHistoryKey = useCallback((tabId) => {
     return `chatHistory_${tabId}`;
   }, []);
@@ -313,7 +297,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       console.error('Error loading tab history:', error);
       return [];
     }
-  }, [getTabHistoryKey]);
+  }, [getTabHistoryKey, ensureMessageTimestamp]);
 
   const saveTabHistory = useCallback((tabId, history) => {
     const key = getTabHistoryKey(tabId);
@@ -336,6 +320,389 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
     }
   }, [loadTabHistory, saveTabHistory, getCurrentTab, ensureMessageTimestamp]);
 
+  // Streaming hook with proper options
+  const {
+    streamingResponse,
+    isStreaming,
+    error: streamingError,
+    audioPlaying,
+    metrics,
+    sendMessage: sendStreamingMessage,
+    stopStreaming,
+    retry,
+    pauseAudio,
+    resumeAudio,
+    getAudioState,
+  } = useStreamingChat({
+    apiBase,
+    chatbotId,
+    sessionId,
+    phone: authenticatedPhoneRef.current || userInfo?.phone || phone || userPhone,
+    name: userName,
+    enableTTS: false, // TEMPORARILY DISABLED TTS
+    isMuted,
+    onComplete: (data) => {
+      // Get target tab before adding message
+      const targetTab = messageOriginTab || getCurrentTab();
+      
+      // Get user's last message for intent detection (before adding bot response)
+      // Load tab history to get the latest user message
+      const currentTabHistory = loadTabHistory(targetTab);
+      const lastUserMessage = currentTabHistory
+        .filter(msg => msg.sender === 'user')
+        .slice(-1)[0];
+      const userMessageText = lastUserMessage?.text?.toLowerCase() || '';
+
+      // Add the final message to chat history
+
+      const botMessage = {
+        sender: "bot",
+        text: data.fullAnswer,
+        timestamp: new Date(),
+        metadata: {
+          ...data.metadata, // Include metadata for special actions like Calendly (and product_cards!)
+        },
+      };
+
+
+      addMessageToTab(targetTab, botMessage);
+      // Play receive sound after a short delay
+      setTimeout(() => {
+        playReceiveSound(soundEnabled);
+      }, 100);
+      setCurrentStreamingMessageId(null);
+      setIsTyping(false);
+
+      // Increment bot message count
+      incrementBotMessageCount();
+
+      // Clear the message origin tab after bot response
+      setMessageOriginTab(null);
+
+      // Authentication check after bot responds (if authentication is needed)
+      // Check if user has sent enough messages and is not verified
+      // Read from localStorage to get the actual count (state updates are async)
+      let currentUserCount = userMessageCount;
+      if (sessionId && chatbotId) {
+        try {
+          const key = `supa_user_message_count:${chatbotId}:${sessionId}`;
+          const stored = localStorage.getItem(key);
+          if (stored) {
+            currentUserCount = parseInt(stored, 10);
+          }
+        } catch (error) {
+          // Fallback to state value
+        }
+      }
+      
+      // Debug logging
+      console.log('🔐 Auth Check:', {
+        currentUserCount,
+        verified,
+        phonePromptSent: phonePromptSentRef.current,
+        sessionId,
+        chatbotId
+      });
+      
+      // Use auth_trigger_message_count from config, default to 1
+      const triggerCount = authConfig.auth_trigger_message_count || 1;
+      
+      console.log('🔐 Auth Check Details:', {
+        auth_enabled: authConfig.auth_enabled,
+        currentUserCount,
+        triggerCount,
+        verified,
+        phonePromptSent: phonePromptSentRef.current,
+        shouldTrigger: authConfig.auth_enabled && currentUserCount >= triggerCount && !verified && !phonePromptSentRef.current
+      });
+      
+      if (authConfig.auth_enabled && currentUserCount >= triggerCount && !verified && !phonePromptSentRef.current) {
+        console.log(`✅ Triggering phone prompt (after ${triggerCount} message(s))`);
+        phonePromptSentRef.current = true;
+        setTimeout(() => {
+          const phonePrompt = {
+            sender: "bot",
+            text: authConfig.auth_phone_prompt_text || "To continue chat, please type your whatsapp number.",
+            timestamp: new Date()
+          };
+          addMessageToTab(targetTab, phonePrompt);
+          // Enable input field for typing
+          setShowInlineAuthInput(true);
+          setAuthPhoneState(true);
+        }, 500);
+      }
+
+      // Intent detection for proposal requests (check user's last message)
+      if (intentConfig.enabled && intentConfig.keywords && intentConfig.keywords.length > 0 && verified && userMessageText) {
+        console.log('🔍 [Intent Detection] Checking for proposal intent:', {
+          enabled: intentConfig.enabled,
+          keywords: intentConfig.keywords,
+          userMessage: userMessageText,
+          verified: verified,
+          pending: proposalConfirmationPending
+        });
+        
+        // Helper function for fuzzy matching (handles typos)
+        const fuzzyMatch = (text, keyword) => {
+          const normalizedText = text.toLowerCase();
+          const normalizedKeyword = keyword.toLowerCase().trim();
+          
+          // Exact substring match
+          if (normalizedText.includes(normalizedKeyword)) {
+            return true;
+          }
+          
+          // Check each word in the message for similarity to keyword
+          const words = normalizedText.split(/\s+/);
+          for (const word of words) {
+            // Skip very short words
+            if (word.length < 3) continue;
+            
+            // Check if word length is similar to keyword (within 3 characters)
+            if (Math.abs(word.length - normalizedKeyword.length) <= 3) {
+              // Check if they share a common prefix (at least 4 characters)
+              const prefixLen = Math.min(4, Math.min(word.length, normalizedKeyword.length));
+              if (word.substring(0, prefixLen) === normalizedKeyword.substring(0, prefixLen)) {
+                // Calculate simple similarity
+                let matches = 0;
+                const minLen = Math.min(word.length, normalizedKeyword.length);
+                for (let i = 0; i < minLen; i++) {
+                  if (word[i] === normalizedKeyword[i]) {
+                    matches++;
+                  }
+                }
+                
+                // If at least 70% of characters match, consider it a match
+                const similarity = matches / Math.max(word.length, normalizedKeyword.length);
+                if (similarity >= 0.7) {
+                  console.log(`✅ Fuzzy match found: "${word}" similar to "${normalizedKeyword}" (similarity: ${(similarity * 100).toFixed(1)}%)`);
+                  return true;
+                }
+              }
+              
+              // Also check if word contains a significant portion of keyword (handles partial matches)
+              if (word.length >= 5 && normalizedKeyword.length >= 5) {
+                const minMatchLen = Math.min(5, Math.min(word.length, normalizedKeyword.length));
+                if (word.includes(normalizedKeyword.substring(0, minMatchLen)) ||
+                    normalizedKeyword.includes(word.substring(0, minMatchLen))) {
+                  console.log(`✅ Partial match found: "${word}" contains "${normalizedKeyword.substring(0, minMatchLen)}"`);
+                  return true;
+                }
+              }
+            }
+          }
+          
+          return false;
+        };
+        
+        // Check if user message contains intent keywords (with fuzzy matching)
+        const hasIntentKeyword = intentConfig.keywords.some(keyword => {
+          return fuzzyMatch(userMessageText, keyword);
+        });
+        
+        console.log('🔍 [Intent Detection] Result:', {
+          hasIntentKeyword,
+          userMessage: userMessageText,
+          keywords: intentConfig.keywords
+        });
+        
+        if (hasIntentKeyword && !proposalConfirmationPending) {
+          console.log('🎯 Proposal intent detected in user message:', userMessageText);
+          setProposalConfirmationPending(true);
+          setProposalQuestionTime(Date.now());
+          
+          // Add confirmation prompt directly to avoid closure issues
+          setTimeout(() => {
+            try {
+              const confirmationPrompt = {
+                sender: "bot",
+                text: intentConfig.confirmation_prompt_text || "Would you like me to send the proposal to your WhatsApp number?",
+                timestamp: new Date()
+              };
+              console.log('📤 Adding confirmation prompt to chat:', confirmationPrompt.text);
+              
+              // Add confirmation prompt directly - localStorage will sync via useEffect
+              setChatHistory(prev => {
+                const newHistory = [...prev, confirmationPrompt];
+                console.log('✅ Confirmation prompt added successfully');
+                return newHistory;
+              });
+            } catch (error) {
+              console.error('❌ Error adding confirmation prompt:', error);
+            }
+          }, 1000);
+        }
+      } else {
+        // Debug why intent detection didn't run
+        console.log('🔍 [Intent Detection] Skipped:', {
+          enabled: intentConfig.enabled,
+          hasKeywords: intentConfig.keywords && intentConfig.keywords.length > 0,
+          verified: verified,
+          hasUserMessage: !!userMessageText,
+          userMessage: userMessageText
+        });
+      }
+
+      // Zoho lead capture intent detection (check user's last message)
+      if (zohoConfig.enabled && 
+          zohoConfig.capture_intent_keywords && 
+          zohoConfig.capture_intent_keywords.length > 0 && 
+          userMessageText && 
+          leadCollectionState === null) {
+        console.log('🔍 [Zoho Intent Detection] Checking for lead capture intent:', {
+          enabled: zohoConfig.enabled,
+          keywords: zohoConfig.capture_intent_keywords,
+          userMessage: userMessageText,
+          currentState: leadCollectionState
+        });
+        
+        // Helper function for fuzzy matching (reuse from proposal intent)
+        const fuzzyMatch = (text, keyword) => {
+          const normalizedText = text.toLowerCase();
+          const normalizedKeyword = keyword.toLowerCase().trim();
+          
+          if (normalizedText.includes(normalizedKeyword)) {
+            return true;
+          }
+          
+          const words = normalizedText.split(/\s+/);
+          for (const word of words) {
+            if (word.length < 3) continue;
+            if (Math.abs(word.length - normalizedKeyword.length) <= 3) {
+              const prefixLen = Math.min(4, Math.min(word.length, normalizedKeyword.length));
+              if (word.substring(0, prefixLen) === normalizedKeyword.substring(0, prefixLen)) {
+                let matches = 0;
+                const minLen = Math.min(word.length, normalizedKeyword.length);
+                for (let i = 0; i < minLen; i++) {
+                  if (word[i] === normalizedKeyword[i]) matches++;
+                }
+                const similarity = matches / Math.max(word.length, normalizedKeyword.length);
+                if (similarity >= 0.7) return true;
+              }
+            }
+          }
+          return false;
+        };
+        
+        // Check if user message contains Zoho capture intent keywords
+        const hasZohoIntentKeyword = zohoConfig.capture_intent_keywords.some(keyword => {
+          return fuzzyMatch(userMessageText, keyword);
+        });
+        
+        if (hasZohoIntentKeyword) {
+          console.log('🎯 Zoho lead capture intent detected:', userMessageText);
+          
+          // Start lead collection flow
+          setLeadCollectionState('INTENT_DETECTED');
+          setCollectedLeadData({ message: userMessageText });
+          
+          // Show initial prompt
+          setTimeout(() => {
+            const initialPrompt = {
+              sender: "bot",
+              text: "Great! I'd love to help you. Let me get some details from you.",
+              timestamp: new Date()
+            };
+            setChatHistory(prev => [...prev, initialPrompt]);
+            
+            // Start asking for name
+            setTimeout(() => {
+              setLeadCollectionState('ASKING_NAME');
+              const namePrompt = {
+                sender: "bot",
+                text: zohoConfig.name_prompt_text || "Great! What's your name?",
+                timestamp: new Date()
+              };
+              setChatHistory(prev => [...prev, namePrompt]);
+            }, 1000);
+          }, 1000);
+        }
+      }
+
+      // Scroll to bottom after message is added
+      setTimeout(() => {
+        if (endOfMessagesRef.current) {
+          endOfMessagesRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'end'
+          });
+        }
+      }, 100);
+    },
+    onError: (error) => {
+      console.error('❌ Streaming error received:', error);
+      
+      setCurrentStreamingMessageId(null);
+      setIsTyping(false);
+      
+      // CRITICAL: Check for credit error FIRST - be extremely explicit
+      // The error object from backend has: { error: "CREDITS_EXHAUSTED", message: "..." }
+      if (error && typeof error === 'object') {
+        // Direct check - this is the exact format from the console log
+        if (error.error === 'CREDITS_EXHAUSTED' || error.error === 'INSUFFICIENT_CREDITS') {
+          const creditMessage = error.message || 'Credit Exhausted Please Contact to support team';
+          console.log('✅ CREDIT ERROR DETECTED - Showing toast:', creditMessage);
+          
+          // Dismiss any existing toasts
+          toast.dismiss();
+          
+          // Show credit error toast
+          toast.error(creditMessage, {
+            autoClose: 5000,
+            position: 'top-center',
+            toastId: 'credit-error'
+          });
+          
+          return; // CRITICAL: Exit immediately to prevent generic error
+        }
+        
+        // Fallback: Check message content
+        if (error.message && (
+          error.message.toLowerCase().includes('credit') || 
+          error.message.toLowerCase().includes('exhausted')
+        )) {
+          const creditMessage = error.message.includes('Credit') 
+            ? error.message 
+            : 'Credit Exhausted Please Contact to support team';
+          
+          toast.dismiss();
+          toast.error(creditMessage, {
+            autoClose: 5000,
+            position: 'top-center',
+            toastId: 'credit-error'
+          });
+          return;
+        }
+      }
+      
+      // Check string format
+      if (typeof error === 'string' && (
+        error.toLowerCase().includes('credit') || 
+        error.toLowerCase().includes('exhausted')
+      )) {
+        toast.dismiss();
+        toast.error('Credit Exhausted Please Contact to support team', {
+          autoClose: 5000,
+          position: 'top-center',
+          toastId: 'credit-error'
+        });
+        return;
+      }
+      
+      // Generic error - only show if NOT a credit error
+      console.log('⚠️ Showing generic error (not a credit error)');
+      toast.dismiss();
+      toast.error('Failed to get response. Please try again.', {
+        toastId: 'generic-error'
+      });
+    },
+  });
+
+  // Constants
+  const AUTH_GATE_KEY = (sid, bot) => `supa_auth_gate:${bot}:${sid}`;
+  const SESSION_STORE_KEY = "chatbot_user_phone";
+  const USER_MESSAGE_COUNT_KEY = (sid, bot) => `supa_user_message_count:${bot}:${sid}`;
+
   const clearTabHistory = useCallback((tabId) => {
     const key = getTabHistoryKey(tabId);
     localStorage.removeItem(key);
@@ -352,6 +719,20 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       if (key.startsWith('chatHistory_')) {
         localStorage.removeItem(key);
       }
+    });
+  }, []);
+
+  // Toggle sound notifications
+  const toggleSound = useCallback(() => {
+    setSoundEnabled(prev => {
+      const newValue = !prev;
+      console.log('Sound toggled:', newValue ? 'ON' : 'OFF');
+      try {
+        localStorage.setItem('chatbot_sound_enabled', JSON.stringify(newValue));
+      } catch (error) {
+        console.error('Error saving sound preference:', error);
+      }
+      return newValue;
     });
   }, []);
 
@@ -535,6 +916,10 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         setShowOtpInput(false);
         setCurrentAuthValue('');
       }
+      // Reset phone prompt ref for new conversation
+      phonePromptSentRef.current = false;
+      setAuthPhoneState(false);
+      setAuthOtpState(false);
 
       // Navigate to home and replace the current URL
       navigate('/', { replace: true });
@@ -877,8 +1262,8 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         // User provided name but not phone yet
         setUserCollectionState('ASKING_PHONE');
       } else {
-        // New user or hasn't started collection
-        setUserCollectionState('INITIAL');
+        // New user or hasn't started collection - Skip name collection, go directly to SKIPPED
+        setUserCollectionState('SKIPPED');
       }
     } catch (error) {
       console.error('Error loading user collection data:', error);
@@ -899,18 +1284,29 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
     }
   }, [sessionId, chatbotId]);
 
+  // Authentication after first message - COMMENTED OUT
   // Check if user needs auth based on message count when component mounts or verified state changes
-  // COMMENTED OUT - Auth is now controlled by backend configuration only
   /* useEffect(() => {
     
-    if (userMessageCount >= 2 && !verified) {
+    if (userMessageCount >= 1 && !verified && !authPhoneState && !authOtpState) {
       setNeedsAuth(true);
       setShowInlineAuth(true);
+      // Ask for phone number in chat after bot responds
+      setAuthPhoneState(true);
     } else if (verified) {
       setNeedsAuth(false);
       setShowInlineAuth(false);
+      setAuthPhoneState(false);
+      setAuthOtpState(false);
     }
-  }, [userMessageCount, verified]); */
+  }, [userMessageCount, verified, authPhoneState, authOtpState]); */
+
+  // Reset phone prompt ref when verified or authPhoneState changes
+  useEffect(() => {
+    if (verified || !authPhoneState) {
+      phonePromptSentRef.current = false;
+    }
+  }, [verified, authPhoneState]);
 
   // Set initial greeting - DISABLED (user doesn't want initial greeting)
   /* useEffect(() => {
@@ -950,8 +1346,257 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
     return () => clearInterval(interval);
   }, []); */
 
+  // Fetch UI configuration (custom avatar and welcome text) when chatbotId changes
+  useEffect(() => {
+    if (!chatbotId || !apiBase) {
+      console.log('UI Config: Missing chatbotId or apiBase', { chatbotId, apiBase });
+      setUiConfigLoading(false); // No config to load if missing chatbotId/apiBase
+      return;
+    }
 
+    // Reset loading state when chatbotId changes
+    setUiConfigLoading(true);
+    setCustomAvatarUrl(null);
+    setCustomWelcomeText(null);
+    setAssistantDisplayName(null);
+    setAssistantLogoUrl(null);
+    setInputPlaceholdersEnabled(false);
+    setInputPlaceholders(["Ask me anything...", "How can I help you?", "What would you like to know?"]);
+    setInputPlaceholderSpeed(2.5);
+    setInputPlaceholderAnimation("fade");
 
+    const fetchUIConfig = async () => {
+      try {
+        console.log(`[UI Config] Fetching UI config for chatbot: ${chatbotId} from ${apiBase}`);
+        const response = await axios.get(`${apiBase}/chatbot/${chatbotId}/ui-config`);
+        
+        console.log('[UI Config] Full response:', response);
+        console.log('[UI Config] Response data:', response.data);
+        
+        // Handle response structure: { success: true, data: { avatar_url, welcome_text, assistant_display_name } }
+        const config = response.data?.data || response.data;
+        
+        console.log('[UI Config] Parsed config:', config);
+        
+        if (config && config.avatar_url) {
+          setCustomAvatarUrl(config.avatar_url);
+          console.log('[UI Config] ✅ Custom avatar URL set:', config.avatar_url);
+        } else {
+          setCustomAvatarUrl(null);
+          console.log('[UI Config] ⚠️ No custom avatar URL found, using default');
+        }
+        
+        if (config && config.welcome_text) {
+          setCustomWelcomeText(config.welcome_text);
+          console.log('[UI Config] ✅ Custom welcome text set:', config.welcome_text);
+        } else {
+          setCustomWelcomeText(null);
+          console.log('[UI Config] ⚠️ No custom welcome text found, using default');
+        }
+
+        if (config && config.assistant_display_name) {
+          setAssistantDisplayName(config.assistant_display_name);
+        } else if (config && config.chatbot_name) {
+          setAssistantDisplayName(config.chatbot_name);
+        } else {
+          setAssistantDisplayName("Ai Assistant");
+        }
+
+        if (config && config.assistant_logo_url) {
+          setAssistantLogoUrl(config.assistant_logo_url);
+          console.log('[UI Config] ✅ Assistant logo URL set:', config.assistant_logo_url);
+        } else {
+          setAssistantLogoUrl(null);
+          console.log('[UI Config] ⚠️ No assistant logo URL found, using default');
+        }
+
+        // Update browser tab title
+        if (config && config.tab_title) {
+          document.title = config.tab_title;
+          console.log('[UI Config] ✅ Browser tab title set:', config.tab_title);
+        } else if (config && config.chatbot_name) {
+          document.title = config.chatbot_name;
+          console.log('[UI Config] ✅ Browser tab title set to chatbot name:', config.chatbot_name);
+        } else {
+          document.title = "Ai Assistant";
+          console.log('[UI Config] ⚠️ Using default browser tab title');
+        }
+
+        // Update input placeholder configuration
+        if (config && config.input_placeholders_enabled !== undefined) {
+          setInputPlaceholdersEnabled(config.input_placeholders_enabled);
+        }
+        if (config && config.input_placeholders && Array.isArray(config.input_placeholders)) {
+          setInputPlaceholders(config.input_placeholders);
+        }
+        if (config && config.input_placeholder_speed !== undefined) {
+          setInputPlaceholderSpeed(config.input_placeholder_speed);
+        }
+        if (config && config.input_placeholder_animation) {
+          setInputPlaceholderAnimation(config.input_placeholder_animation);
+        }
+
+        // Update favicon
+        if (config && config.favicon_url) {
+          // Remove existing favicon links
+          const existingFavicons = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+          existingFavicons.forEach(link => link.remove());
+
+          // Create new favicon link
+          const link = document.createElement('link');
+          link.rel = 'icon';
+          link.type = 'image/png';
+          link.href = config.favicon_url;
+          document.head.appendChild(link);
+          console.log('[UI Config] ✅ Favicon set:', config.favicon_url);
+        } else {
+          // If no custom favicon, keep the default (or remove custom ones)
+          const existingFavicons = document.querySelectorAll('link[rel="icon"][href^="http"]');
+          existingFavicons.forEach(link => link.remove());
+          console.log('[UI Config] ⚠️ No custom favicon, using default');
+        }
+
+      } catch (error) {
+        console.error("[UI Config] ❌ Error fetching UI config:", error);
+        console.error("[UI Config] Error details:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status,
+          url: `${apiBase}/chatbot/${chatbotId}/ui-config`
+        });
+        // Silently fail - use defaults if config not found
+        setCustomAvatarUrl(null);
+        setCustomWelcomeText(null);
+        setAssistantDisplayName("Ai Assistant");
+        document.title = "AI Assistant";
+      } finally {
+        // Always set loading to false after fetch completes (success or error)
+        setUiConfigLoading(false);
+      }
+    };
+
+    fetchUIConfig();
+  }, [chatbotId, apiBase]);
+
+  // Fetch authentication configuration
+  useEffect(() => {
+    if (!chatbotId || !apiBase) return;
+
+    const fetchAuthConfig = async () => {
+      try {
+        console.log(`[Auth Config] Fetching auth config for chatbot: ${chatbotId} from ${apiBase}`);
+        const config = await getAuthConfig(apiBase, chatbotId);
+        setAuthConfig(config);
+        console.log('[Auth Config] ✅ Loaded:', config);
+        
+        // If auth is enabled, set needsAuth flag
+        if (config.auth_enabled) {
+          console.log('[Auth Config] ✅ Authentication is enabled');
+        }
+      } catch (error) {
+        console.error('[Auth Config] ❌ Error loading config:', error);
+        // Keep default config on error
+      }
+    };
+
+    fetchAuthConfig();
+  }, [chatbotId, apiBase]);
+
+  // Fetch intent configuration
+  useEffect(() => {
+    if (!chatbotId || !apiBase) {
+      console.log('[Intent Config] Missing chatbotId or apiBase, skipping fetch.');
+      setIntentConfigLoading(false);
+      return;
+    }
+
+    setIntentConfigLoading(true);
+    const fetchIntentConfig = async () => {
+      try {
+        console.log(`[Intent Config] Fetching intent config for chatbot: ${chatbotId} from ${apiBase}`);
+        const config = await getIntentConfig(apiBase, chatbotId);
+        setIntentConfig(config);
+        console.log('[Intent Config] ✅ Loaded:', config);
+
+        if (config.enabled) {
+          console.log('[Intent Config] ✅ Intent detection is enabled');
+          console.log('[Intent Config] Keywords:', config.keywords);
+        } else {
+          console.log('[Intent Config] ⚠️ Intent detection is disabled');
+        }
+      } catch (error) {
+        console.error('[Intent Config] ❌ Error loading config:', error);
+      } finally {
+        setIntentConfigLoading(false);
+      }
+    };
+    fetchIntentConfig();
+  }, [chatbotId, apiBase]);
+
+  // Fetch Zoho configuration
+  useEffect(() => {
+    if (!chatbotId || !apiBase) {
+      console.log('[Zoho Config] Missing chatbotId or apiBase, skipping fetch.');
+      setZohoConfigLoading(false);
+      return;
+    }
+
+    setZohoConfigLoading(true);
+    const fetchZohoConfig = async () => {
+      try {
+        console.log(`[Zoho Config] Fetching Zoho config for chatbot: ${chatbotId} from ${apiBase}`);
+        const config = await getZohoConfig(apiBase, chatbotId);
+        setZohoConfig(config);
+        console.log('[Zoho Config] ✅ Loaded:', config);
+
+        if (config.enabled) {
+          console.log('[Zoho Config] ✅ Zoho lead capture is enabled');
+          console.log('[Zoho Config] Keywords:', config.capture_intent_keywords);
+        } else {
+          console.log('[Zoho Config] ⚠️ Zoho lead capture is disabled');
+        }
+      } catch (error) {
+        console.error('[Zoho Config] ❌ Error loading config:', error);
+      } finally {
+        setZohoConfigLoading(false);
+      }
+    };
+    fetchZohoConfig();
+  }, [chatbotId, apiBase]);
+
+  // Fetch transcript configuration
+  useEffect(() => {
+    if (!chatbotId || !apiBase) {
+      return;
+    }
+
+    const fetchTranscriptConfig = async () => {
+      try {
+        console.log(`[Transcript Config] Fetching transcript config for chatbot: ${chatbotId} from ${apiBase}`);
+        const config = await getTranscriptConfig(apiBase, chatbotId);
+        console.log('[Transcript Config] ✅ Loaded:', config);
+
+        // Update frontend inactivity manager with config
+        if (config.enabled && config.inactivity_timeout_ms) {
+          frontendInactivityManager.updateConfig(true, config.inactivity_timeout_ms);
+          console.log(`[Transcript Config] ✅ Transcript enabled with timeout: ${config.inactivity_timeout_ms}ms`);
+        } else {
+          frontendInactivityManager.updateConfig(false, null);
+          console.log('[Transcript Config] ⚠️ Transcript disabled or incomplete config');
+          // Clear any active timers when disabled
+          if (sessionId) {
+            frontendInactivityManager.clearInactivityTimer(sessionId);
+          }
+        }
+      } catch (error) {
+        console.error('[Transcript Config] ❌ Error loading config:', error);
+        // Disable transcript on error
+        frontendInactivityManager.updateConfig(false, null);
+      }
+    };
+
+    fetchTranscriptConfig();
+  }, [chatbotId, apiBase]);
 
   // Debug effect to track authentication state (removed to prevent infinite loop)
   // useEffect(() => {
@@ -1161,7 +1806,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
     }
   }, [showInlineAuth, showWelcome]);
 
-  // UNCOMMENTED: Handle inline auth input display after 2 messages
+  // UNCOMMENTED: Handle inline auth input display after 1st message
   useEffect(() => {
 
     if (
@@ -1170,8 +1815,8 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       !isTyping &&
       !otpSent
     ) {
-      // Show auth input immediately if user has sent 2+ messages (page refresh scenario)
-      if (userMessageCount >= 2) {
+      // Show auth input immediately if user has sent 1+ messages (page refresh scenario)
+      if (userMessageCount >= 1) {
         setShowInlineAuthInput(true);
       } else {
         // For new messages, show auth input after a short delay regardless of animation
@@ -1254,23 +1899,57 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   // Check mobile - Enhanced detection using utility
   useEffect(() => {
     const checkMobile = () => {
+      // Use multiple detection methods for reliability
+      const width = window.innerWidth || document.documentElement.clientWidth || window.screen.width;
       const deviceInfo = getDeviceInfo();
-      setIsMobile(deviceInfo.isMobile);
       
-      // Log for debugging
+      // Check CSS custom property first (set by loader)
+      const cssIsMobile = document.documentElement.getAttribute('data-is-mobile');
+      let isMobileValue = deviceInfo.isMobile;
+      
+      if (cssIsMobile === 'true') {
+        isMobileValue = true;
+      } else if (cssIsMobile === 'false') {
+        isMobileValue = false;
+      } else {
+        // Fallback detection
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(navigator.userAgent);
+        isMobileValue = width < 768 || (isTouchDevice && width <= 1024) || isMobileUserAgent;
+      }
+      
+      setIsMobile(isMobileValue);
+      
+      // Hamburger menu shows on screens smaller than 769px (mobile/tablet)
+      setShowHamburgerMenu(width < 769 || isMobileValue);
     };
 
-    checkMobile();
+    // Initial check with slight delay to ensure DOM is ready
+    const initialCheck = setTimeout(checkMobile, 50);
     
     // Add resize listener with debouncing for better performance
     const debouncedCheckMobile = debounce(checkMobile, 100);
     
     window.addEventListener("resize", debouncedCheckMobile);
-    window.addEventListener("orientationchange", checkMobile); // Handle orientation changes
+    window.addEventListener("orientationchange", () => {
+      setTimeout(checkMobile, 200); // Delay for orientation change
+    });
+    
+    // Also listen for viewport changes
+    const observer = new MutationObserver(() => {
+      checkMobile();
+    });
+    
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-is-mobile']
+    });
     
     return () => {
+      clearTimeout(initialCheck);
       window.removeEventListener("resize", debouncedCheckMobile);
       window.removeEventListener("orientationchange", checkMobile);
+      observer.disconnect();
     };
   }, []);
 
@@ -1369,7 +2048,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         toast.success("OTP sent to your email!");
       } else {
         const ok = /^[6-9]\d{9}$/.test(phone);
-        if (!ok) return toast.error("Enter a valid 10-digit WhatsApp number");
+        if (!ok) return toast.error("Type 10 digit correct whatsapp number");
         await axios.post(`${apiBase}/whatsapp-otp/send`, { phone, chatbotId });
         toast.success("OTP sent to your WhatsApp number!");
       }
@@ -1469,19 +2148,22 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
 
 
 
-  // New authentication functions using the authentication hook
+  // OTP Authentication - Using new API
   const handleSendOtpNew = async (phoneNumber) => {
     try {
       setCurrentAuthValue(phoneNumber);
       await sendOtp(phoneNumber);
       setShowInlineAuthInput(false);
-      setShowOtpInput(true);
+      setShowOtpInput(false); // Don't show OTP input form, use chat instead
+      setOtpSent(true);
       toast.success('OTP sent to your WhatsApp!');
     } catch (error) {
       toast.error(error.message || 'Failed to send OTP');
+      throw error; // Re-throw to handle in caller
     }
   };
 
+  // OTP Authentication - Using new API
   const handleVerifyOtpNew = async (otpCode) => {
     try {
       const authResult = await verifyOtp(otpCode, currentAuthValue);
@@ -1491,7 +2173,13 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       authenticatedPhoneRef.current = currentAuthValue;
       setShowOtpInput(false);
       setShowInlineAuth(false);
-      toast.success('Authentication successful!');
+      setAuthOtpState(false);
+      setAuthPhoneState(false);
+      setVerified(true);
+      
+      // Use custom success message from config
+      const successMessage = authConfig.auth_success_text || 'Authentication successful!';
+      toast.success(successMessage);
 
       // Send pending message if user had tried to send one before auth
       if (pendingMessageAfterAuth.current) {
@@ -1555,6 +2243,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
 
             // Read the stream
             let isComplete = false;
+            let currentEventType = null; // Track current event type
             function readStream() {
               reader.read().then(({ done, value }) => {
                 if (done || isComplete) {
@@ -1567,13 +2256,17 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                       timestamp: new Date(),
                     };
                     addMessageToTab(currentTab, botMessage);
+                    // Play receive sound after a short delay
+                    setTimeout(() => {
+                      playReceiveSound(soundEnabled);
+                    }, 100);
                   }
                   setIsTyping(false);
                   setCurrentStreamingMessageId(null);
                   setManualStreamingResponse('');
                   setMessageOriginTab(null);
                   // Reset the skip flag so next user message is added properly
-                  skipAddingUserMessage.current = false;
+                  skipAddingUserMessage.current = true; // Prevent duplicate addition
                   return;
                 }
 
@@ -1582,9 +2275,12 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
 
                 for (const line of lines) {
                   // Check for event type
-                  if (line.startsWith('event: complete') || line.startsWith('event: close')) {
+                  if (line.startsWith('event: ')) {
+                    currentEventType = line.substring(7).trim();
+                    if (currentEventType === 'complete' || currentEventType === 'close') {
                     console.log('🎉 STEP 6: Stream completion detected');
                     isComplete = true;
+                    }
                   }
 
                   if (line.startsWith('data: ')) {
@@ -1592,6 +2288,22 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                     if (data && data !== '[DONE]') {
                       try {
                         const parsed = JSON.parse(data);
+                        
+                        // Check if this is an error event or error data
+                        if (currentEventType === 'error' || parsed.error === 'CREDITS_EXHAUSTED' || parsed.error === 'INSUFFICIENT_CREDITS') {
+                          console.log('✅ Credit error detected in manual stream!', parsed);
+                          setIsTyping(false);
+                          setCurrentStreamingMessageId(null);
+                          setManualStreamingResponse('');
+                          const creditMessage = parsed.message || 'Credit Exhausted Please Contact to support team';
+                          toast.error(creditMessage, {
+                            autoClose: 5000,
+                            position: 'top-center'
+                          });
+                          isComplete = true;
+                          return;
+                        }
+                        
                         if (parsed.content) {
                           fullAnswer += parsed.content;
                           // Update the manual streaming response for live display
@@ -1604,6 +2316,11 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                         // Ignore parse errors
                       }
                     }
+                  }
+                  
+                  // Reset event type after processing data
+                  if (line === '') {
+                    currentEventType = null;
                   }
                 }
 
@@ -1645,9 +2362,11 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       }
     } catch (error) {
       toast.error(error.message || 'Invalid OTP');
+      throw error; // Re-throw error so promise is rejected and caller's .catch() can handle it
     }
   };
 
+  // OTP Authentication - Using new API
   const handleResendOtpNew = async () => {
     try {
       if (!currentAuthValue) {
@@ -1721,6 +2440,14 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       return { valid: false, skipped: true };
     }
 
+    // Remove all non-digit characters to check total length
+    const digitsOnly = cleaned.replace(/\D/g, '');
+    
+    // Check if we have exactly 10 digits
+    if (digitsOnly.length !== 10) {
+      return { valid: false, skipped: false, error: 'length' };
+    }
+
     // Extract phone number (supports various formats)
     // +91 9834699858, 9834699858, +919834699858, 91-9834699858
     const phoneRegex = /(?:\+?91[-\s]?)?([6-9]\d{9})/;
@@ -1728,7 +2455,41 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
 
     if (match) {
       const phone = match[1]; // Get just the 10 digits
+      // Double-check it's exactly 10 digits
+      if (phone.length === 10 && /^[6-9]\d{9}$/.test(phone)) {
       return { valid: true, phone: phone, skipped: false };
+      }
+    }
+
+    return { valid: false, skipped: false, error: 'format' };
+  };
+
+  /**
+   * Extract and validate email address from message
+   */
+  const extractAndValidateEmail = (message) => {
+    const cleaned = message.trim();
+
+    // Check for skip keywords
+    if (/^(skip|no|cancel|later|next)$/i.test(cleaned)) {
+      return { valid: false, skipped: true };
+    }
+
+    // Email regex pattern
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    // Try to extract email from common patterns
+    let email = cleaned;
+    
+    // Pattern: "My email is X" or "Email: X" or "It's X"
+    const emailIsMatch = cleaned.match(/(?:my email is|email is|email:|it's|it is)\s*([^\s@]+@[^\s@]+\.[^\s@]+)/i);
+    if (emailIsMatch) {
+      email = emailIsMatch[1].trim();
+    }
+
+    // Validate email format
+    if (emailRegex.test(email)) {
+      return { valid: true, email: email.toLowerCase(), skipped: false };
     }
 
     return { valid: false, skipped: false };
@@ -1759,7 +2520,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
    * User collection prompts - Natural, no mention of "skip"
    */
   const USER_COLLECTION_PROMPTS = {
-    askName: "By the way, Can you please tell me your name?",
+    // askName: "By the way, Can you please tell me your name?",
 
     thankName: (name) => `May I have your phone number to keep you updated?`,
 
@@ -1772,74 +2533,653 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
 
   // ===== END USER COLLECTION UTILITY FUNCTIONS =====
 
+  // Helper function to save lead to Zoho (defined outside callback to avoid hoisting issues)
+  const saveLeadToZohoHelper = useCallback(async (leadData, tabId) => {
+    try {
+      // Show "saving" message
+      const savingMessage = {
+        sender: "bot",
+        text: "Saving your details...",
+        timestamp: new Date()
+      };
+      addMessageToTab(tabId, savingMessage);
+      
+      // Ensure all required fields are present and not null/undefined/empty
+      const requiredFields = zohoConfig.required_fields || ['name', 'phone', 'email'];
+      
+      // Build cleaned data object, preserving actual values
+      const cleanedLeadData = {
+        name: leadData.name,
+        phone: leadData.phone,
+        email: leadData.email,
+        company: leadData.company || null,
+        message: leadData.message || null,
+      };
+      
+      // Validate that all required fields are present and have values
+      const missingFields = requiredFields.filter(field => {
+        const value = cleanedLeadData[field];
+        return !value || (typeof value === 'string' && value.trim() === '');
+      });
+      
+      if (missingFields.length > 0) {
+        console.error('❌ Missing required fields:', missingFields);
+        console.error('❌ Lead data received:', leadData);
+        console.error('❌ Cleaned lead data:', cleanedLeadData);
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+      
+      console.log('✅ Saving lead data:', cleanedLeadData);
+      
+      // Call backend API
+      const result = await captureLeadToZoho(
+        apiBase, 
+        chatbotId, 
+        cleanedLeadData, 
+        sessionId
+      );
+      
+      if (result.success || result.data?.success) {
+        // Success
+        setLeadCollectionState('COMPLETED');
+        const successMessage = {
+          sender: "bot",
+          text: zohoConfig.success_message || "✅ Thank you! We've saved your details. Our team will reach out soon!",
+          timestamp: new Date()
+        };
+        addMessageToTab(tabId, successMessage);
+        
+        // Reset for next time
+        setTimeout(() => {
+          setLeadCollectionState(null);
+          setCollectedLeadData({ name: null, phone: null, email: null, company: null, message: null });
+        }, 2000);
+      } else {
+        // Error
+        const errorMessage = {
+          sender: "bot",
+          text: "Sorry, there was an error saving your details. Please try again later.",
+          timestamp: new Date()
+        };
+        addMessageToTab(tabId, errorMessage);
+        setLeadCollectionState(null);
+      }
+    } catch (error) {
+      console.error('Error saving lead:', error);
+      const errorMessage = {
+        sender: "bot",
+        text: "Sorry, there was an error. Please try again later.",
+        timestamp: new Date()
+      };
+      addMessageToTab(tabId, errorMessage);
+      setLeadCollectionState(null);
+    } finally {
+      isSendingMessageRef.current = false;
+    }
+  }, [apiBase, chatbotId, sessionId, addMessageToTab, zohoConfig, setLeadCollectionState, setCollectedLeadData]);
+
   const handleSendMessage = useCallback(
     async (inputText) => {
-
-      // Hide welcome section when user sends a message
-      if (showWelcome) {
-        setShowWelcome(false);
+      const textToSend = inputText || message;
+      const trimmedText = textToSend.trim();
+      
+      // Get current tab early - needed for lead collection and other operations
+      const currentTab = getCurrentTab();
+      
+      // Prevent duplicate sends - multiple checks
+      const now = Date.now();
+      if (isSendingMessageRef.current) {
+        return;
       }
-
-      if (!sessionId) {
+      
+      // Prevent sending the same message within 1 second
+      if (lastSentMessageRef.current === trimmedText && (now - lastSentTimeRef.current) < 1000) {
         return;
       }
 
-      const textToSend = inputText || message;
-      if (!textToSend.trim()) return;
+      // Mark as sending IMMEDIATELY to prevent duplicate calls (before any other checks)
+      isSendingMessageRef.current = true;
+      lastSentMessageRef.current = trimmedText;
+      lastSentTimeRef.current = now;
 
-      // ===== USER COLLECTION FLOW =====
+      try {
+        // Hide welcome section when user sends a message
+        if (showWelcome) {
+          setShowWelcome(false);
+        }
 
-      const currentTab = getCurrentTab();
+        if (!sessionId) {
+          isSendingMessageRef.current = false;
+          lastSentMessageRef.current = null;
+          return;
+        }
 
-      // Handle ASKING_NAME state
-      if (userCollectionState === 'ASKING_NAME') {
-        // ALWAYS try to extract name from message, even if it's a question
-        const nameResult = extractAndValidateName(textToSend);
+        if (!trimmedText) {
+          isSendingMessageRef.current = false;
+          lastSentMessageRef.current = null;
+          return;
+        }
 
-        // Check if user is asking a question
-        const isQuery = isRegularQuery(textToSend);
+        // ===== AUTHENTICATION BLOCKING CHECK =====
+        // Block message sending if authentication is required but user is not verified
+        if (authConfig.auth_enabled && !verified) {
+          // Get current user message count
+          let currentUserCount = userMessageCount;
+          if (sessionId && chatbotId) {
+            try {
+              const key = `supa_user_message_count:${chatbotId}:${sessionId}`;
+              const stored = localStorage.getItem(key);
+              if (stored) {
+                currentUserCount = parseInt(stored, 10);
+              }
+            } catch (error) {
+              // Fallback to state value
+            }
+          }
+          
+          const triggerCount = authConfig.auth_trigger_message_count || 1;
+          
+          // If user has reached trigger count and not verified, block message
+          if (currentUserCount >= triggerCount) {
+            // Only allow phone/OTP input, block regular messages
+            if (!authPhoneState && !authOtpState) {
+              toast.warning('Please verify your phone number to continue chatting');
+              isSendingMessageRef.current = false;
+              lastSentMessageRef.current = null;
+              return;
+            }
+          }
+        }
 
-        if (nameResult.valid) {
-          // Found a valid name in the message!
-          setUserName(nameResult.name);
-          localStorage.setItem('chatbot_user_name', nameResult.name);
-          localStorage.setItem('chatbot_user_collection_state', 'ASKING_PHONE');
-          setUserCollectionState('ASKING_PHONE');
-
-          // Add user message
-          const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
-          addMessageToTab(currentTab, userMessage);
-          setMessage("");
-
-          if (isQuery) {
-            // User asked a question AND provided name - process query first
-            // Fall through to send their question to backend
-            // Phone will be asked after 3rd message (handled in onComplete callback)
-          } else {
-            // Just provided name - acknowledge but don't ask for phone yet
-            // Phone will be asked after 3rd message (handled in onComplete callback)
-            const botMessage = {
-              sender: "bot",
-              text: `Nice to meet you, ${nameResult.name}! How can I help you?`,
-              timestamp: new Date()
+        // ===== ZOHO LEAD COLLECTION HANDLING =====
+        // Handle lead collection flow
+        if (leadCollectionState && leadCollectionState !== 'COMPLETED' && leadCollectionState !== null) {
+          // Handle ASKING_NAME state
+          if (leadCollectionState === 'ASKING_NAME') {
+            const nameResult = extractAndValidateName(textToSend);
+            
+            if (nameResult.valid) {
+              // Add user message first
+              const userMsg = { sender: "user", text: textToSend, timestamp: new Date() };
+              addMessageToTab(currentTab, userMsg);
+              setMessage("");
+              
+              // Update collected data
+              setCollectedLeadData(prev => ({ ...prev, name: nameResult.name }));
+              
+              // Move to phone
+              setLeadCollectionState('ASKING_PHONE');
+              setTimeout(() => {
+                const phonePrompt = {
+                  sender: "bot",
+                  text: zohoConfig.phone_prompt_text || "What's your phone number?",
+                  timestamp: new Date()
+                };
+                addMessageToTab(currentTab, phonePrompt);
+              }, 500);
+              
+              isSendingMessageRef.current = false;
+              return;
+            } else if (nameResult.skipped) {
+              // User skipped - cancel collection
+              setLeadCollectionState(null);
+              setCollectedLeadData({ name: null, phone: null, email: null, company: null, message: null });
+              isSendingMessageRef.current = false;
+              return;
+            } else {
+              // Invalid name - ask again
+              const errorPrompt = {
+                sender: "bot",
+                text: "Please provide a valid name (at least 2 characters).",
+                timestamp: new Date()
+              };
+              addMessageToTab(currentTab, errorPrompt);
+              isSendingMessageRef.current = false;
+              return;
+            }
+          }
+          
+          // Handle ASKING_PHONE state
+          if (leadCollectionState === 'ASKING_PHONE') {
+            const phoneResult = extractAndValidatePhone(textToSend);
+            
+            if (phoneResult.valid) {
+              setCollectedLeadData(prev => ({ ...prev, phone: phoneResult.phone }));
+              addMessageToTab(currentTab, { sender: "user", text: textToSend, timestamp: new Date() });
+              setMessage("");
+              
+              // Move to email
+              setLeadCollectionState('ASKING_EMAIL');
+              setTimeout(() => {
+                const emailPrompt = {
+                  sender: "bot",
+                  text: zohoConfig.email_prompt_text || "What's your email address?",
+                  timestamp: new Date()
+                };
+                addMessageToTab(currentTab, emailPrompt);
+              }, 500);
+              
+              isSendingMessageRef.current = false;
+              return;
+            } else if (phoneResult.skipped) {
+              // User skipped - cancel collection
+              setLeadCollectionState(null);
+              setCollectedLeadData({ name: null, phone: null, email: null, company: null, message: null });
+              isSendingMessageRef.current = false;
+              return;
+            } else {
+              // Invalid phone
+              const errorPrompt = {
+                sender: "bot",
+                text: "Type 10 digit correct whatsapp number",
+                timestamp: new Date()
+              };
+              addMessageToTab(currentTab, errorPrompt);
+              isSendingMessageRef.current = false;
+              return;
+            }
+          }
+          
+          // Handle ASKING_EMAIL state
+          if (leadCollectionState === 'ASKING_EMAIL') {
+            const emailResult = extractAndValidateEmail(textToSend);
+            
+            if (emailResult.valid) {
+              // Update state
+              setCollectedLeadData(prev => ({ ...prev, email: emailResult.email }));
+              addMessageToTab(currentTab, { sender: "user", text: textToSend, timestamp: new Date() });
+              setMessage("");
+              
+              // Build current data object with all collected values (use functional state access)
+              // We need to get the latest values from state, so we'll build it from what we know we have
+              const buildCurrentData = () => {
+                // Get the latest state by using a ref or building from known values
+                // Since we just updated email, we know we have: name, phone, email
+                return {
+                  name: collectedLeadData.name,
+                  phone: collectedLeadData.phone,
+                  email: emailResult.email, // Use the value we just collected
+                  company: collectedLeadData.company || null,
+                  message: collectedLeadData.message || null,
+                };
+              };
+              
+              // Check if all required fields collected
+              const requiredFields = zohoConfig.required_fields || ['name', 'phone', 'email'];
+              const currentData = buildCurrentData();
+              const hasAllRequired = requiredFields.every(field => {
+                const value = currentData[field];
+                return value !== null && value !== undefined && value !== '';
+              });
+              
+              if (hasAllRequired) {
+                // Check if we need to ask for optional fields
+                const optionalFields = zohoConfig.optional_fields || [];
+                if (optionalFields.includes('company')) {
+                  setLeadCollectionState('ASKING_COMPANY');
+                  setTimeout(() => {
+                    const companyPrompt = {
+                      sender: "bot",
+                      text: zohoConfig.company_prompt_text || "Which company are you from? (optional)",
+                      timestamp: new Date()
+                    };
+                    addMessageToTab(currentTab, companyPrompt);
+                  }, 500);
+                } else {
+                  // All required fields collected, no optional fields - save now
+                  setLeadCollectionState('COLLECTING');
+                  
+                  // Save lead to Zoho using helper function with the data we built
+                  saveLeadToZohoHelper(currentData, currentTab);
+                }
+              } else {
+                // Should not happen, but handle gracefully
+                console.error('Missing required fields:', requiredFields.filter(f => !currentData[f]));
+                setLeadCollectionState(null);
+                isSendingMessageRef.current = false;
+                return;
+              }
+              
+              isSendingMessageRef.current = false;
+              return;
+            } else if (emailResult.skipped) {
+              // User skipped - cancel collection
+              setLeadCollectionState(null);
+              setCollectedLeadData({ name: null, phone: null, email: null, company: null, message: null });
+              isSendingMessageRef.current = false;
+              return;
+            } else {
+              // Invalid email
+              const errorPrompt = {
+                sender: "bot",
+                text: "Please provide a valid email address.",
+                timestamp: new Date()
+              };
+              addMessageToTab(currentTab, errorPrompt);
+              isSendingMessageRef.current = false;
+              return;
+            }
+          }
+          
+          // Handle ASKING_COMPANY state
+          if (leadCollectionState === 'ASKING_COMPANY') {
+            // Company is optional, accept any input or skip
+            if (/^(skip|no|cancel|not now|later)$/i.test(textToSend.trim())) {
+              // User skipped company
+              setCollectedLeadData(prev => ({ ...prev, company: null }));
+            } else {
+              setCollectedLeadData(prev => ({ ...prev, company: textToSend.trim() }));
+            }
+            
+            addMessageToTab(currentTab, { sender: "user", text: textToSend, timestamp: new Date() });
+            setMessage("");
+            
+            // Update state with company
+            const companyValue = /^(skip|no|cancel|not now|later)$/i.test(textToSend.trim()) ? null : textToSend.trim();
+            setCollectedLeadData(prev => ({ ...prev, company: companyValue }));
+            
+            // All fields collected - save now
+            setLeadCollectionState('COLLECTING');
+            
+            // Build data object with all collected values
+            const currentData = {
+              name: collectedLeadData.name,
+              phone: collectedLeadData.phone,
+              email: collectedLeadData.email,
+              company: companyValue,
+              message: collectedLeadData.message || null,
             };
-            addMessageToTab(currentTab, botMessage);
+            
+            // Save lead to Zoho using helper function
+            saveLeadToZohoHelper(currentData, currentTab);
+            
             return;
           }
-        } else if (isQuery) {
-          // It's a question but no valid name found - skip name collection
-          setUserCollectionState('SKIPPED');
-          // Fall through to process query
-        } else {
-          // Not a valid name and not a query - skip collection
-          setUserCollectionState('SKIPPED');
-
-          // Add user message
-          const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
-          addMessageToTab(currentTab, userMessage);
-          setMessage("");
-          // Fall through
+          
+          // If in COLLECTING state, don't process message (wait for save to complete)
+          if (leadCollectionState === 'COLLECTING') {
+            isSendingMessageRef.current = false;
+            return;
+          }
         }
+
+        // ===== PROPOSAL CONFIRMATION HANDLING =====
+        // Check if user is responding to proposal confirmation question
+        if (proposalConfirmationPending) {
+          console.log('🔍 [Proposal Confirmation] Processing response:', {
+            message: trimmedText,
+            pending: proposalConfirmationPending,
+            questionTime: proposalQuestionTime
+          });
+          
+          const timeoutMinutes = intentConfig.timeout_minutes || 5;
+          const timeoutMs = timeoutMinutes * 60 * 1000;
+          
+          // Check if confirmation has timed out
+          if (proposalQuestionTime && (Date.now() - proposalQuestionTime) > timeoutMs) {
+            console.log('⏰ Proposal confirmation timed out');
+            setProposalConfirmationPending(false);
+            setProposalQuestionTime(null);
+          } else {
+            // Check if response is positive confirmation
+            const normalizedResponse = trimmedText.toLowerCase().trim();
+            const positiveResponses = intentConfig.positive_responses || ["yes", "yep", "sure", "ok", "send it", "please", "go ahead", "yes please"];
+            const negativeResponses = intentConfig.negative_responses || ["no", "not now", "later", "maybe later", "not yet"];
+            
+            console.log('🔍 [Proposal Confirmation] Checking responses:', {
+              normalizedResponse,
+              positiveResponses,
+              negativeResponses
+            });
+            
+            const isPositive = positiveResponses.some(response => {
+              const normalized = response.toLowerCase().trim();
+              return normalizedResponse === normalized || normalizedResponse.includes(normalized);
+            });
+            const isNegative = negativeResponses.some(response => {
+              const normalized = response.toLowerCase().trim();
+              return normalizedResponse === normalized || normalizedResponse.includes(normalized);
+            });
+            
+            console.log('🔍 [Proposal Confirmation] Match result:', {
+              isPositive,
+              isNegative,
+              message: trimmedText
+            });
+            
+            if (isPositive) {
+              console.log('✅ [Proposal Confirmation] User confirmed - sending proposal');
+              
+              // Clear message input immediately to prevent it from being sent as regular message
+              setMessage("");
+              setProposalConfirmationPending(false);
+              setProposalQuestionTime(null);
+              
+              // Add user message directly - use state update only, localStorage will sync via useEffect
+              const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
+              
+              // Update state immediately - this is safe and doesn't have closure issues
+              // localStorage will be updated by the existing useEffect that watches chatHistory
+              setChatHistory(prev => [...prev, userMessage]);
+              
+              // Get verified phone number
+              const verifiedPhone = userInfo?.phone || phone || userPhone;
+              console.log('📱 [Proposal] Verified phone:', verifiedPhone);
+              
+              if (!verifiedPhone) {
+                console.warn('⚠️ [Proposal] No verified phone number found');
+                const errorMessage = {
+                  sender: "bot",
+                  text: "I don't have your WhatsApp number. Please verify your phone number first.",
+                  timestamp: new Date()
+                };
+                // Use functional update - localStorage will sync via useEffect
+                setChatHistory(prev => [...prev, errorMessage]);
+                isSendingMessageRef.current = false;
+                return;
+              }
+              
+              // Send proposal
+              console.log('📤 [Proposal] Sending proposal to:', verifiedPhone);
+              sendProposal(apiBase, chatbotId, verifiedPhone)
+                .then((result) => {
+                  console.log('✅ [Proposal] Proposal sent successfully:', result);
+                  const successMessage = {
+                    sender: "bot",
+                    text: intentConfig.success_message || "✅ Proposal sent to your WhatsApp number!",
+                    timestamp: new Date()
+                  };
+                  // Add success message directly - localStorage will sync via useEffect
+                  setChatHistory(prev => [...prev, successMessage]);
+                  toast.success(intentConfig.toast_message || "Proposal sent successfully! 📱");
+                })
+                .catch((error) => {
+                  console.error('❌ [Proposal] Error sending proposal:', error);
+                  const errorMessage = {
+                    sender: "bot",
+                    text: `Sorry, I couldn't send the proposal: ${error.message || "An unexpected error occurred."}`,
+                    timestamp: new Date()
+                  };
+                  // Add error message directly - localStorage will sync via useEffect
+                  setChatHistory(prev => [...prev, errorMessage]);
+                  toast.error("Failed to send proposal");
+                })
+                .finally(() => {
+                  isSendingMessageRef.current = false;
+                });
+              
+              return; // Stop further processing
+            } else if (isNegative) {
+              // User declined
+              setMessage("");
+              setProposalConfirmationPending(false);
+              setProposalQuestionTime(null);
+              
+              const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
+              const declineMessage = {
+                sender: "bot",
+                text: "No problem! Let me know when you're ready.",
+                timestamp: new Date()
+              };
+              
+              // Add messages directly - localStorage will sync via useEffect
+              setChatHistory(prev => [...prev, userMessage, declineMessage]);
+              
+              isSendingMessageRef.current = false;
+              return;
+            }
+            // If response doesn't match positive/negative, continue as normal message
+            // but reset proposal confirmation state
+            setProposalConfirmationPending(false);
+            setProposalQuestionTime(null);
+          }
+        }
+
+        // ===== AUTHENTICATION FLOW IN CHAT =====
+        // Note: currentTab already declared at the top of function
+
+        // Handle phone number input for authentication
+        if (authPhoneState && !verified) {
+          // Check if input contains only numbers and valid phone characters
+          const hasOnlyNumbers = /^[\d\+\-\s]+$/.test(textToSend.trim());
+          
+          if (!hasOnlyNumbers) {
+            // User typed text instead of numbers - show error without adding their message
+            setMessage("");
+            setTimeout(() => {
+              const errorMessage = {
+                sender: "bot",
+                text: "Type 10 digit correct whatsapp number",
+                timestamp: new Date()
+              };
+              addMessageToTab(currentTab, errorMessage);
+            }, 300);
+            
+            isSendingMessageRef.current = false;
+            return;
+          }
+          
+          const phoneResult = extractAndValidatePhone(textToSend);
+          
+          // Phone validation and OTP sending
+          if (phoneResult.valid) {
+            // Found valid phone number - send OTP
+            const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
+            addMessageToTab(currentTab, userMessage);
+            setMessage("");
+            
+            // Send OTP in background
+            handleSendOtpNew(phoneResult.phone).then(() => {
+              // After OTP is sent, ask for OTP in chat
+              setAuthPhoneState(false);
+              setAuthOtpState(true);
+              setTimeout(() => {
+                const otpPrompt = {
+                  sender: "bot",
+                  text: authConfig.auth_otp_prompt_text || "I've sent an OTP to your whatsapp number. Please enter the 6-digit OTP code.",
+                  timestamp: new Date()
+                };
+                addMessageToTab(currentTab, otpPrompt);
+              }, 500);
+            }).catch(() => {
+              // Error handled in handleSendOtpNew
+            });
+            
+            isSendingMessageRef.current = false;
+            return;
+          } else {
+            // Invalid phone number - show error message
+            const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
+            addMessageToTab(currentTab, userMessage);
+            setMessage("");
+            
+            setTimeout(() => {
+              const errorMessage = {
+                sender: "bot",
+                text: "Type 10 digit correct whatsapp number",
+                timestamp: new Date()
+              };
+              addMessageToTab(currentTab, errorMessage);
+            }, 500);
+            
+            isSendingMessageRef.current = false;
+            return;
+          }
+        }
+
+        // Handle OTP input for authentication
+        if (authOtpState && !verified) {
+          // Check if message is a 6-digit OTP
+          const trimmedText = textToSend.trim();
+          const otpMatch = trimmedText.match(/^\d{6}$/);
+          
+          if (otpMatch) {
+            const otpCode = otpMatch[0];
+            const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
+            addMessageToTab(currentTab, userMessage);
+            setMessage("");
+            
+            // Verify OTP in background
+            handleVerifyOtpNew(otpCode).then(() => {
+              // Authentication successful
+              setAuthOtpState(false);
+              setTimeout(() => {
+                const successMessage = {
+                  sender: "bot",
+                  text: authConfig.auth_success_text || "Great! You're verified",
+                  timestamp: new Date()
+                };
+                addMessageToTab(currentTab, successMessage);
+              }, 500);
+            }).catch(() => {
+              // Error handled in handleVerifyOtpNew
+              setTimeout(() => {
+                const errorMessage = {
+                  sender: "bot",
+                  text: "Invalid OTP. Please try again and Enter a valid OTP.",
+                  timestamp: new Date()
+                };
+                addMessageToTab(currentTab, errorMessage);
+              }, 500);
+            });
+            
+            isSendingMessageRef.current = false;
+            return;
+          } else {
+            // Check if input contains only digits but not exactly 6 digits
+            const isOnlyDigits = /^\d+$/.test(trimmedText);
+            
+            if (isOnlyDigits) {
+              // User entered digits but not exactly 6 digits
+              const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
+              addMessageToTab(currentTab, userMessage);
+              setMessage("");
+              
+              setTimeout(() => {
+                const errorMessage = {
+                  sender: "bot",
+                  text: "Please enter the 6-digit valid OTP code.",
+                  timestamp: new Date()
+                };
+                addMessageToTab(currentTab, errorMessage);
+              }, 500);
+            
+            isSendingMessageRef.current = false;
+            return;
+            }
+            // If input contains non-digits, let it fall through to normal message handling
+          }
+        }
+
+        // ===== USER COLLECTION FLOW =====
+
+      // Handle ASKING_NAME state - DISABLED: Name collection is disabled
+      if (userCollectionState === 'ASKING_NAME') {
+        // Skip name collection - mark as SKIPPED and continue with normal flow
+        setUserCollectionState('SKIPPED');
+        localStorage.setItem('chatbot_user_collection_state', 'SKIPPED');
+        // Fall through to process as regular query
+        skipAddingUserMessage.current = false; // Allow message to be added normally
       }
 
       // Handle ASKING_PHONE state
@@ -1865,6 +3205,8 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
           if (isQuery) {
             // User asked a question AND provided phone - process query first
             // Fall through to send their question to backend
+            // Mark that we've already added the message to prevent duplicate
+            skipAddingUserMessage.current = true;
           } else {
             // Just provided phone - subtle confirmation
             const botMessage = {
@@ -1884,82 +3226,18 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
           const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
           addMessageToTab(currentTab, userMessage);
           setMessage("");
-          // Fall through to process as regular query
+          // Fall through to process as regular query - mark that we've already added the message
+          skipAddingUserMessage.current = true;
         }
       }
 
       // ===== END USER COLLECTION FLOW =====
 
-      // Handle INITIAL state - trigger collection after 1st message (ask for name)
+      // Handle INITIAL state - DISABLED: Name collection is disabled, skip directly to regular flow
       if (userCollectionState === 'INITIAL') {
-        // Calculate new count before incrementing (since state updates are async)
-        const newMessageCount = userMessageCount + 1;
-        const willAskForName = newMessageCount === 1; // Ask for name after 1st message
-        
-        // Increment user message count
-        incrementUserMessageCount();
-
-        // Stop any currently streaming response
-        if (isStreaming) {
-          stopStreaming();
-        }
-
-        // Properly stop any currently playing audio
-        stopAudio();
-
-        // Small delay to ensure audio is fully stopped
-        await new Promise(resolve => setTimeout(resolve, 50));
-
-        // Add user message
-        const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
-        addMessageToTab(currentTab, userMessage);
-
-        // Track which tab this message was sent from
-        setMessageOriginTab(currentTab);
-
-        setMessage("");
-        setIsTyping(true);
-
-        // Send the message to backend
-        try {
-          if (!apiBase) {
-            throw new Error('API Base URL is not defined');
-          }
-
-          const messageId = `streaming-${Date.now()}`;
-          setCurrentStreamingMessageId(messageId);
-
-          // Send message with current user data
-          // Check localStorage as fallback in case state hasn't updated yet (React async state updates)
-          const currentName = userName || localStorage.getItem('chatbot_user_name') || null;
-          const currentPhone = userPhone || localStorage.getItem('chatbot_user_phone') || null;
-          await sendStreamingMessage(textToSend, {
-            name: currentName,
-            phone: currentPhone,
-            email: null
-          });
-
-          // After bot responds, ask for name if this is the 1st message
-          if (willAskForName) {
-            setTimeout(() => {
-              const botMessage = {
-                sender: "bot",
-                text: USER_COLLECTION_PROMPTS.askName,
-                timestamp: new Date()
-              };
-              addMessageToTab(currentTab, botMessage);
-              setUserCollectionState('ASKING_NAME');
-            }, 500);
-          }
-
-          return;
-        } catch (error) {
-          console.error('Error sending message:', error);
-          setCurrentStreamingMessageId(null);
-          setIsTyping(false);
-          toast.error('Failed to send message. Please try again.');
-          return;
-        }
+        // Skip name collection - mark as SKIPPED immediately
+        setUserCollectionState('SKIPPED');
+        localStorage.setItem('chatbot_user_collection_state', 'SKIPPED');
       }
 
       // Increment user message count
@@ -1982,6 +3260,8 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       if (!skipAddingUserMessage.current) {
         const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
         addMessageToTab(currentTab, userMessage);
+        // Play send sound
+        playSendSound(soundEnabled);
       } else {
         skipAddingUserMessage.current = false; // Reset flag
       }
@@ -2042,7 +3322,25 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         console.error('Error sending message:', error);
         setCurrentStreamingMessageId(null);
         setIsTyping(false);
+        
+        // Check if it's a credit error
+        const errorMessage = error?.message || error?.error?.message || String(error);
+        if (errorMessage.includes('Credit') || errorMessage.includes('credit') || 
+            error?.error === 'CREDITS_EXHAUSTED' || error?.error === 'INSUFFICIENT_CREDITS') {
+          toast.error('Credit Exhausted Please Contact to support team', {
+            autoClose: 5000,
+            position: 'top-center'
+          });
+        } else {
         toast.error('Failed to send message. Please try again.');
+        }
+      }
+      } finally {
+        // Always reset the sending flag, even if there was an error
+        // Use setTimeout to ensure flag is reset after a small delay to prevent rapid re-triggers
+        setTimeout(() => {
+          isSendingMessageRef.current = false;
+        }, 300);
       }
     },
     [
@@ -2060,7 +3358,23 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       stopStreaming,
       shouldShowAuth,
       authToken,
-      userMessageCount
+      userMessageCount,
+      authConfig,
+      verified,
+      authPhoneState,
+      authOtpState,
+      leadCollectionState,
+      collectedLeadData,
+      zohoConfig,
+      saveLeadToZohoHelper,
+      extractAndValidateName,
+      extractAndValidatePhone,
+      extractAndValidateEmail,
+      proposalConfirmationPending,
+      proposalQuestionTime,
+      intentConfig,
+      userCollectionState,
+      userName
     ]
   );
 
@@ -2178,6 +3492,10 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
             suggestions: action.suggestions || []
           };
           addMessageToTab(currentTab, botMessage);
+          // Play receive sound after a short delay
+          setTimeout(() => {
+            playReceiveSound(soundEnabled);
+          }, 100);
           setIsTyping(false);
           
           // Increment bot message count
@@ -2433,7 +3751,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
           <h4 style="margin: 0 0 15px 0; color: #92400e; font-size: 18px; font-weight: 700;">⚡ WHAT YOU GET IN EVERY PLAN</h4>
           <ul style="margin: 0; padding-left: 20px; color: #92400e;">
             <li style="margin-bottom: 8px;">100% Responsive, fast, Business-ready website</li>
-            <li style="margin-bottom: 8px;">AI chat agent integrated (Supa Agent)</li>
+            <li style="margin-bottom: 8px;">AI chat agent integrated (Raymond Realty)</li>
             <li style="margin-bottom: 8px;">Multilingual chat & content</li>
             <li style="margin-bottom: 8px;">Analytics and lead dashboard</li>
             <li style="margin-bottom: 8px;">CRM integration</li>
@@ -2490,7 +3808,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
           
           <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #f97316;">
             <h4 style="color: #c2410c; margin: 0 0 10px 0; font-size: 16px; font-weight: 600;">Q7. Can I integrate it with other platforms?</h4>
-            <p style="margin: 0; color: #4b5563; font-size: 15px;">Absolutely. All Troika AI Websites come pre-integrated with Supa Agent and optional voice or RCS agents.</p>
+            <p style="margin: 0; color: #4b5563; font-size: 15px;">Absolutely. All Troika AI Websites come pre-integrated with Raymond Realty and optional voice or RCS agents.</p>
           </div>
           
           <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid #10b981;">
@@ -2518,8 +3836,8 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
           </div>
           
           <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 15px;">
-            <h4 style="color: white; margin: 0 0 10px 0; font-size: 16px; font-weight: 600;">Q12. Why Troika Tech?</h4>
-            <p style="margin: 0; color: #e0e7ff; font-size: 15px;">Because we deliver complete digital ecosystems  AI Websites + Supa Agent + Analytics  not just templates.</p>
+            <h4 style="color: white; margin: 0 0 10px 0; font-size: 16px; font-weight: 600;">Q12. Why Raymond Realty?</h4>
+            <p style="margin: 0; color: #e0e7ff; font-size: 15px;">Because we deliver complete digital ecosystems  AI Websites + Raymond Realty + Analytics  not just templates.</p>
           </div>
         </div>
 
@@ -2773,13 +4091,13 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
 
 Each site is powered by intelligent automation built to attract visitors, talk to them, capture leads, analyze performance, and help you grow automatically.<br>
 
-Your website becomes a living system that learns from every chat, visit, and click managed end-to-end by Troika Tech.<br>
+Your website becomes a living system that learns from every chat, visit, and click managed end-to-end by Raymond Realty.<br>
 
 From AI Knowledgebase to Lead Management, we handle it all for you.<br><br>
 
 🕓 Delivery Time: 7 Days<br>
 💬 Support: AI + Human Hybrid<br>
-🌐 Integrations: Supa Agent • RCS • Analytics<br><br>
+🌐 Integrations: Raymond Realty • RCS • Analytics<br><br>
 
 
 We combine beautiful design, intelligent automation, and integrated chat agents to turn your website into a lead-generating machine powered by AI, driven by data, and perfected by humans.<br>
@@ -3464,7 +4782,7 @@ AI Website is built for instant replies, 24×7.<br>
         <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 600; color: #1f2937;">Follow Us on Social Media</h3>
         
         <div style="display: flex; flex-wrap: wrap; gap: 15px; justify-content: center;">
-          <a href="https://www.facebook.com/troikatechservices" target="_blank" style="
+          <a href="https://www.facebook.com/DeekshaVedantu/" target="_blank" style="
             background: #3b82f6;
             color: white;
             padding: 12px 20px;
@@ -3480,7 +4798,7 @@ AI Website is built for instant replies, 24×7.<br>
             <span>📘</span> Facebook
           </a>
           
-          <a href="https://instagram.com/troikatech" target="_blank" style="
+          <a href="https://www.instagram.com/deekshavedantu_/" target="_blank" style="
             background: #e11d48;
             color: white;
             padding: 12px 20px;
@@ -3496,7 +4814,7 @@ AI Website is built for instant replies, 24×7.<br>
             <span>📷</span> Instagram
           </a>
           
-          <a href="https://youtube.com/@troikatech" target="_blank" style="
+          <a href="https://www.youtube.com/@deekshakarnataka" target="_blank" style="
             background: #dc2626;
             color: white;
             padding: 12px 20px;
@@ -3528,7 +4846,7 @@ AI Website is built for instant replies, 24×7.<br>
             <span>💼</span> LinkedIn
           </a>
           
-          <a href="https://twitter.com/troikatech" target="_blank" style="
+          <a href="https://x.com/deekshanetwork" target="_blank" style="
             background: #1da1f2;
             color: white;
             padding: 12px 20px;
@@ -3572,7 +4890,7 @@ AI Website is built for instant replies, 24×7.<br>
     
     // Fallback for other actions
     const suggestionMessages = {
-      'services': 'What services does Troika Tech offer?',
+      'services': 'What services does Raymond Realty offer?',
       'pricing': 'What is the pricing for AI services?',
       'demo': 'Can I get a demo?',
       'support': 'What kind of support do you provide?'
@@ -3844,41 +5162,41 @@ AI Website is built for instant replies, 24×7.<br>
     }
   }, [handleSendMessage, getCurrentTab, addMessageToTab, handleTabNavigation]);
 
-  // Voice recording handlers
+  // Voice recording handlers - DISABLED
   const handleMicClick = () => {
-    // Allow click on both mobile and desktop as fallback
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording((text) => {
-        handleSendMessage(text);
-      }).catch((error) => {
-        toast.error(error.message || "Voice recording failed. Please ensure microphone permissions are granted.");
-      });
-    }
+    // Microphone functionality disabled - no-op
+    return;
   };
 
-  // Simplified touch handlers - just use click behavior (start/stop toggle)
+  // Simplified touch handlers - DISABLED
   const handleMicTouchStart = useCallback(
     (e) => {
-      // No-op: Let onClick handle it
+      // Microphone functionality disabled - no-op
+      e.preventDefault();
+      e.stopPropagation();
     },
     []
   );
 
   const handleMicTouchEnd = useCallback(
     (e) => {
-      // No-op: Let onClick handle it
+      // Microphone functionality disabled - no-op
+      e.preventDefault();
+      e.stopPropagation();
     },
     []
   );
 
   const handleMicMouseDown = useCallback((e) => {
-    // No-op: Let onClick handle it
+    // Microphone functionality disabled - no-op
+    e.preventDefault();
+    e.stopPropagation();
   }, []);
 
   const handleMicMouseUp = useCallback((e) => {
-    // No-op: Let onClick handle it
+    // Microphone functionality disabled - no-op
+    e.preventDefault();
+    e.stopPropagation();
   }, []);
 
   // Sidebar and page management handlers
@@ -3941,7 +5259,8 @@ AI Website is built for instant replies, 24×7.<br>
   const handleKeyPress = (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      if (!isTyping) {
+      // Prevent duplicate sends - check both isTyping and the sending flag
+      if (!isTyping && !isSendingMessageRef.current) {
         handleSendMessage();
       }
     }
@@ -3953,33 +5272,69 @@ AI Website is built for instant replies, 24×7.<br>
 
       {showChat && (
         <Overlay ref={overlayRef} $isDarkMode={isDarkMode}>
-          <AnimatedBlob $isDarkMode={isDarkMode} />
-          
           {/* Sidebar */}
           <Sidebar
             isOpen={sidebarOpen}
             onClose={handleSidebarClose}
+            onToggle={handleSidebarToggle}
             onSocialMediaClick={handleSocialMediaClick}
             onTabNavigation={handleTabNavigation}
+            chatbotId={chatbotId}
+            apiBase={apiBase}
+            authenticatedPhone={isAuthenticated && userInfo?.phone ? userInfo.phone : null}
           />
 
           {/* Main Content Area */}
           <MainContentArea $isDarkMode={isDarkMode} $sidebarOpen={sidebarOpen}>
             <Chatbox ref={chatboxRef} $isDarkMode={isDarkMode}>
-              <ChatHeader
-                currentTime={currentTime}
-                batteryLevel={batteryLevel}
-                isCharging={isCharging}
-                chatbotLogo={chatbotLogo}
-                isMuted={isMuted}
-                toggleMute={toggleMute}
-                onSidebarToggle={handleSidebarToggle}
-                sidebarOpen={sidebarOpen}
-              />
-
+              <ChatTitle $isDarkMode={isDarkMode}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 0 }}>
+                  {showHamburgerMenu && (
+                    <button
+                      onClick={handleSidebarToggle}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: isDarkMode ? '#ffffff' : '#000000',
+                        fontSize: '24px',
+                        cursor: 'pointer',
+                        padding: '8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        outline: 'none',
+                        borderRadius: '6px',
+                        transition: 'background 0.2s ease',
+                        minWidth: '40px',
+                        minHeight: '40px',
+                        flexShrink: 0
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'transparent';
+                      }}
+                      title="Open sidebar"
+                    >
+                      <FaBars />
+                    </button>
+                  )}
+                  {/* <span style={{ flexShrink: 0 }}>SP University Pune</span> */}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                  <NotificationsDropdown 
+                    soundEnabled={soundEnabled}
+                    toggleSound={toggleSound}
+                  />
+                  <ProfileDropdown />
+                </div>
+              </ChatTitle>
               <ChatContainer $isWelcomeMode={showWelcome}>
         {getCurrentTab() === 'get-quote' ? (
           <ServiceSelection 
+            chatbotId={chatbotId}
+            apiBase={apiBase}
             onSendProposal={async (service) => {
               try {
                 // Prefer authenticated phone from hook, else fallback to localStorage
@@ -4054,6 +5409,15 @@ AI Website is built for instant replies, 24×7.<br>
               showInlineAuth={showInlineAuth}
               shouldShowAuth={shouldShowAuth}
               isAuthenticated={isAuthenticated}
+              customAvatarUrl={customAvatarUrl}
+              customWelcomeText={customWelcomeText}
+              soundEnabled={soundEnabled}
+              toggleSound={toggleSound}
+              uiConfigLoading={uiConfigLoading}
+              inputPlaceholdersEnabled={inputPlaceholdersEnabled}
+              inputPlaceholders={inputPlaceholders}
+              inputPlaceholderSpeed={inputPlaceholderSpeed}
+              inputPlaceholderAnimation={inputPlaceholderAnimation}
             />
         ) : null}
                 
@@ -4076,8 +5440,11 @@ AI Website is built for instant replies, 24×7.<br>
                           chatHistoryLength={chatHistory.length}
                           currentlyPlaying={currentlyPlaying}
                           playAudio={playAudio}
+                          assistantName={assistantDisplayName}
+                          assistantAvatarUrl={assistantLogoUrl || customAvatarUrl || chatbotLogo}
                           onSuggestionClick={handleBotSuggestionClick}
                           onCalendlyEventScheduled={handleCalendlyBooking}
+                          chatbotId={chatbotId}
                         />
                         {msg.showServiceButtons && showServiceSelection && (
                           <ServiceSelectionButtons
@@ -4119,29 +5486,14 @@ AI Website is built for instant replies, 24×7.<br>
                         chatHistoryLength={chatHistory.length + 1}
                         currentlyPlaying={currentlyPlaying}
                         playAudio={playAudio}
+                        assistantName={assistantDisplayName}
+                        assistantAvatarUrl={assistantLogoUrl || customAvatarUrl || chatbotLogo}
                         onSuggestionClick={handleBotSuggestionClick}
+                        chatbotId={chatbotId}
                       />
                     )}
 
-                    {/* REMOVED: Old Authentication Components - Using new user collection flow instead */}
-                    {/* {showInlineAuth && showInlineAuthInput && (
-                      <AuthMessageBubble
-                        onSendOtp={handleSendOtpNew}
-                        loading={authLoading}
-                        error={authError}
-                      />
-                    )}
-
-                    {showInlineAuth && showOtpInput && (
-                      <OtpMessageBubble
-                        onVerifyOtp={handleVerifyOtpNew}
-                        onResendOtp={handleResendOtpNew}
-                        loading={authLoading}
-                        error={authError}
-                        success={null}
-                        resendCooldown={resendCooldown}
-                      />
-                    )} */}
+                    {/* Authentication handled through regular chat messages - no separate form */}
 
                     {/* Show typing indicator when typing but streaming hasn't started with content yet */}
                     {isTyping && !(isStreaming && streamingResponse) && (
@@ -4173,11 +5525,20 @@ AI Website is built for instant replies, 24×7.<br>
                   handleMicMouseUp={handleMicMouseUp}
                   isMobile={isMobile}
                   handleSendMessage={handleSendMessage}
-                    isWelcomeMode={false}
-                  currentlyPlaying={currentlyPlaying}
                   showInlineAuth={showInlineAuth}
+                  showInlineAuthInput={showInlineAuthInput || authPhoneState || authOtpState}
+                  authPhoneState={authPhoneState}
+                  authOtpState={authOtpState}
+                  soundEnabled={soundEnabled}
+                  toggleSound={toggleSound}
+                  isWelcomeMode={false}
+                  currentlyPlaying={currentlyPlaying}
                   shouldShowAuth={shouldShowAuth}
                   isAuthenticated={isAuthenticated}
+                  inputPlaceholdersEnabled={inputPlaceholdersEnabled}
+                  inputPlaceholders={inputPlaceholders}
+                  inputPlaceholderSpeed={inputPlaceholderSpeed}
+                  inputPlaceholderAnimation={inputPlaceholderAnimation}
                 />
                 )}
               </ChatContainer>

@@ -3,11 +3,29 @@ import conversationTranscriptService from './conversationTranscriptService';
 class FrontendInactivityManager {
   constructor() {
     this.activeTimers = new Map();
-    this.INACTIVITY_TIMEOUT = 30000; // 30 seconds
+    this.INACTIVITY_TIMEOUT = null; // Will be set from config
     this.TRANSCRIPT_TRACKING_KEY = 'supa_transcript_sent_sessions';
+    this.transcriptEnabled = false; // Will be set from config
 
     // Load previously sent sessions from localStorage
     this.transcriptSentSessions = this.loadTranscriptTracking();
+  }
+
+  /**
+   * Update transcript configuration
+   * @param {Boolean} enabled - Whether transcript is enabled
+   * @param {Number} timeoutMs - Inactivity timeout in milliseconds
+   */
+  updateConfig(enabled, timeoutMs) {
+    const wasEnabled = this.transcriptEnabled;
+    this.transcriptEnabled = enabled === true;
+    this.INACTIVITY_TIMEOUT = timeoutMs && timeoutMs >= 1000 ? timeoutMs : null;
+    
+    // If transcript was just disabled, clear all active timers
+    if (wasEnabled && !this.transcriptEnabled) {
+      console.log('[Transcript Config] ⚠️ Transcript disabled, clearing all active timers');
+      this.clearAllTimers();
+    }
   }
 
   /**
@@ -48,12 +66,15 @@ class FrontendInactivityManager {
    * @param {String} apiBase - API base URL
    */
   startInactivityTimer(sessionId, phone, chatbotId, chatHistory, apiBase) {
+    // Don't start timer if transcript is not enabled or timeout is not configured
+    if (!this.transcriptEnabled || !this.INACTIVITY_TIMEOUT) {
+      return;
+    }
     
     // Clear existing timer if any
     if (this.activeTimers.has(sessionId)) {
       clearTimeout(this.activeTimers.get(sessionId));
     }
-
 
     // Set new timer
     const timerId = setTimeout(() => {
@@ -86,6 +107,11 @@ class FrontendInactivityManager {
    */
   async handleInactivity(sessionId, phone, chatbotId, chatHistory, apiBase) {
     try {
+      // Double-check that transcript is still enabled before sending
+      if (!this.transcriptEnabled) {
+        console.log(`⚠️ [INACTIVITY DEBUG] Transcript is disabled, skipping send for session: ${sessionId}`);
+        return;
+      }
 
       // Check if transcript was already sent for this session
       if (this.transcriptSentSessions.has(sessionId)) {

@@ -1,14 +1,14 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import styled from "styled-components";
 import { InlineWidget } from "react-calendly";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import Sidebar from "./Sidebar";
-import ChatHeader from "./ChatHeader";
 import { useBattery } from "../hooks/useBattery";
 import { useClock } from "../hooks/useClock";
 import GlobalStyle from "../styles/GlobalStyles";
 import { Wrapper, Overlay, AnimatedBlob, Chatbox, MainContentArea } from "../styles/MainStyles";
+import axios from "axios";
 
 const ScheduleContentContainer = styled.div`
   display: flex;
@@ -113,15 +113,50 @@ const CalendlyWrapper = styled.div`
   }
 `;
 
-function ScheduleMeeting() {
+function ScheduleMeeting({ chatbotId, apiBase }) {
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [calendlyUrl, setCalendlyUrl] = useState("https://calendly.com/troika-parvati/new-meeting"); // Default fallback
+  const [loadingCalendly, setLoadingCalendly] = useState(true);
 
   // Use the same hooks as SupaChatbot for consistency
   const { batteryLevel, isCharging } = useBattery();
   const { currentTime } = useClock();
+
+  // Fetch Calendly URL from backend when component mounts
+  useEffect(() => {
+    if (!chatbotId || !apiBase) {
+      console.log('[ScheduleMeeting] Missing chatbotId or apiBase, using default Calendly URL');
+      setLoadingCalendly(false);
+      return;
+    }
+
+    const fetchCalendlyUrl = async () => {
+      try {
+        console.log(`[ScheduleMeeting] Fetching Calendly config for chatbot: ${chatbotId} from ${apiBase}`);
+        const response = await axios.get(`${apiBase}/chatbot/${chatbotId}/sidebar-config`);
+        
+        const config = response.data?.data || response.data;
+        const configuredUrl = config.calendly_url;
+        
+        if (configuredUrl && config.calendly_enabled && config.calendly_mode === "redirect") {
+          setCalendlyUrl(configuredUrl);
+          console.log('[ScheduleMeeting] ✅ Using configured Calendly URL:', configuredUrl);
+        } else {
+          console.log('[ScheduleMeeting] ⚠️ No configured Calendly URL found, using default');
+        }
+      } catch (error) {
+        console.error("[ScheduleMeeting] ❌ Error fetching Calendly config:", error);
+        // Keep default URL on error
+      } finally {
+        setLoadingCalendly(false);
+      }
+    };
+
+    fetchCalendlyUrl();
+  }, [chatbotId, apiBase]);
 
   const handleSidebarToggle = useCallback(() => {
     setSidebarOpen(!sidebarOpen);
@@ -157,40 +192,46 @@ function ScheduleMeeting() {
         <Sidebar
           isOpen={sidebarOpen}
           onClose={handleSidebarClose}
+          onToggle={handleSidebarToggle}
           onSocialMediaClick={handleSocialMediaClick}
           onTabNavigation={handleTabNavigation}
+          chatbotId={chatbotId}
+          apiBase={apiBase}
         />
 
         {/* Main Content Area */}
         <MainContentArea $isDarkMode={isDarkMode} $sidebarOpen={sidebarOpen}>
           <Chatbox $isDarkMode={isDarkMode}>
-            <ChatHeader
-              currentTime={currentTime}
-              batteryLevel={batteryLevel}
-              isCharging={isCharging}
-              chatbotLogo="https://raw.githubusercontent.com/troika-tech/Asset/refs/heads/main/Supa%20Agent%20new.png"
-              isMuted={isMuted}
-              toggleMute={toggleMute}
-              onSidebarToggle={handleSidebarToggle}
-              sidebarOpen={sidebarOpen}
-            />
-
             <ScheduleContentContainer $isDarkMode={isDarkMode}>
               <ContentWrapper>
-                <Title $isDarkMode={isDarkMode}>Schedule a Meeting</Title>
+                <Title $isDarkMode={isDarkMode}>Book An Appointment</Title>
                 <Subtitle $isDarkMode={isDarkMode}>
                   Book a time that works best for you. We're excited to connect!
                 </Subtitle>
 
-                <CalendlyWrapper $isDarkMode={isDarkMode}>
-                  <InlineWidget
-                    url="https://calendly.com/troika-parvati/new-meeting"
-                    styles={{
+                {loadingCalendly ? (
+                  <CalendlyWrapper $isDarkMode={isDarkMode}>
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      alignItems: 'center', 
                       height: '700px',
-                      width: '100%'
-                    }}
-                  />
-                </CalendlyWrapper>
+                      color: isDarkMode ? '#ffffff' : '#000000'
+                    }}>
+                      Loading Calendly...
+                    </div>
+                  </CalendlyWrapper>
+                ) : (
+                  <CalendlyWrapper $isDarkMode={isDarkMode}>
+                    <InlineWidget
+                      url={calendlyUrl}
+                      styles={{
+                        height: '700px',
+                        width: '100%'
+                      }}
+                    />
+                  </CalendlyWrapper>
+                )}
               </ContentWrapper>
             </ScheduleContentContainer>
           </Chatbox>

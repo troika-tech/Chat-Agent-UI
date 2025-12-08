@@ -155,10 +155,14 @@ export const Overlay = styled.div`
   top: 0;
   left: 0;
   width: 100vw;
+  max-width: 100vw;
   height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
+  max-height: 100vh;
+  max-height: calc(var(--vh, 1vh) * 100);
   background: ${props => props.$isDarkMode
     ? 'linear-gradient(to bottom right, #000000, #000000, #000000)'
-    : 'linear-gradient(to bottom right, #e0e7ff, #f0f9ff, #fef3c7)'};
+    : '#f8f8f7'};
   z-index: 9999;
   display: flex;
   flex-direction: row;
@@ -169,47 +173,21 @@ export const Overlay = styled.div`
   overflow: hidden;
   transition: background 0.5s ease;
   position: relative;
-
-  /* Animated blob backgrounds */
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, ${props => props.$isDarkMode ? 'rgba(139, 92, 246, 0.15)' : 'rgba(139, 92, 246, 0.1)'} 0%, transparent 70%);
-    animation: blob 7s ease-in-out infinite;
-    pointer-events: none;
+  
+  /* Prevent horizontal scroll */
+  overflow-x: hidden;
+  
+  /* Force mobile layout when data-is-mobile="true" */
+  html[data-is-mobile="true"] & {
+    flex-direction: column;
+  }
+  
+  /* Landscape mode optimization */
+  @media (orientation: landscape) and (max-height: 500px) {
+    height: 100vh;
+    max-height: 100vh;
   }
 
-  &::after {
-    content: '';
-    position: absolute;
-    top: -30%;
-    right: -30%;
-    width: 150%;
-    height: 150%;
-    background: radial-gradient(circle, ${props => props.$isDarkMode ? 'rgba(236, 72, 153, 0.15)' : 'rgba(236, 72, 153, 0.1)'} 0%, transparent 70%);
-    animation: blob 8s ease-in-out infinite reverse;
-    animation-delay: 2s;
-    pointer-events: none;
-  }
-
-  @keyframes blob {
-    0%, 100% {
-      transform: translate(0, 0) scale(1);
-    }
-    25% {
-      transform: translate(20px, -50px) scale(1.1);
-    }
-    50% {
-      transform: translate(-20px, 20px) scale(0.9);
-    }
-    75% {
-      transform: translate(20px, 50px) scale(1.05);
-    }
-  }
 
   /* Enhanced mobile responsiveness - Full screen coverage */
   @media (max-width: 1200px) {
@@ -230,6 +208,13 @@ export const Overlay = styled.div`
   @media (max-width: 768px) {
     align-items: center;
     padding: 0;
+    flex-direction: column;
+  }
+  
+  /* Force mobile layout when data-is-mobile="true" (even if media query doesn't match) */
+  html[data-is-mobile="true"] & {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   @media (max-width: 640px) {
@@ -306,22 +291,35 @@ export const Chatbox = styled.div`
   opacity: 0;
   animation: slideUp 0.5s ease-out forwards;
   width: 100%;
+  max-width: 100vw;
   height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
+  max-height: 100vh;
+  max-height: calc(var(--vh, 1vh) * 100);
   position: relative;
   display: flex;
   flex-direction: column;
-
-
-  background: transparent;
+  background: #ffffff;
   border-radius: 0;
   box-shadow: none;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
-  position: relative;
   border: none;
   transition: background 0.3s ease;
-
+  
+  /* Prevent horizontal scroll */
+  overflow-x: hidden;
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 100vw;
+  }
+  
+  /* Landscape mode */
+  @media (orientation: landscape) and (max-height: 500px) {
+    height: 100vh;
+    max-height: 100vh;
+  }
 `;
 
 export const ChatContainer = styled.div`
@@ -332,9 +330,19 @@ export const ChatContainer = styled.div`
   min-height: 0;
   position: relative;
   overflow: visible;
-  background: ${props => props.$isDarkMode ? 'transparent' : '#f8f9fa'};
+  background: ${props => props.$isDarkMode ? 'transparent' : '#f8f8f7'};
   width: 100%;
+  max-width: 100%;
   align-items: stretch;
+  
+  /* Prevent horizontal scroll */
+  overflow-x: hidden;
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 100vw;
+  }
   
   /* Ensure InputArea is always visible and positioned correctly */
   & > *:last-child {
@@ -368,39 +376,50 @@ export const ChatContainer = styled.div`
 export const MessagesContainer = styled.div`
   flex: 1;
   overflow-y: auto;
-  overflow-x: visible;
-  padding: 1.5rem; /* Match Reference.jsx p-6 (24px) */
+  overflow-x: hidden;
+  padding: clamp(0.5rem, 2vw, 1.5rem);
   display: flex;
   flex-direction: column;
   min-height: 0;
   position: relative;
   background: ${props => props.$isDarkMode ? '#000000' : '#f8f9fa'};
   width: 100%;
+  max-width: 100%;
 
-  /* Responsive padding to match Reference.jsx behavior */
-  @media (max-width: 768px) {
-    padding: 1rem; /* p-4 (16px) */
+  /* Background pattern overlay */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: ${props => props.$isDarkMode ? 0.15 : 0.4};
+    pointer-events: none;
+    z-index: 0;
+    background-image: radial-gradient(
+      circle,
+      #a8a29e 1px,
+      transparent 1px
+    );
+    background-size: 24px 24px;
+    background-position: 0 0;
   }
 
-  @media (max-width: 640px) {
-    padding: 0.75rem; /* p-3 (12px) */
+  /* Responsive padding with fluid units */
+  @media (max-width: 1024px) {
+    padding: clamp(0.75rem, 1.5vw, 1.25rem);
+  }
+
+  @media (max-width: 768px) {
+    padding: clamp(0.5rem, 1.25vw, 1rem);
   }
 
   @media (max-width: 480px) {
-    padding: 0.5rem; /* p-2 (8px) */
+    padding: clamp(0.4rem, 1vw, 0.75rem);
   }
 
-  @media (max-width: 414px) {
-    padding: 0.4rem; /* Smaller padding for small phones */
+  @media (max-width: 360px) {
+    padding: clamp(0.3rem, 0.75vw, 0.5rem);
   }
-
-  @media (max-width: 375px) {
-    padding: 0.3rem; /* p-1 (4px) */
-  }
-
-  @media (max-width: 320px) {
-    padding: 0.2rem; /* Minimal padding for very small screens */
-  }
+  
   max-width: 100%;
   margin: 0;
   display: flex;
@@ -422,12 +441,22 @@ export const MessagesContainer = styled.div`
 
 export const MessagesInnerContainer = styled.div`
   width: 100%;
-  max-width: 900px;
+  max-width: min(900px, 95vw);
   display: flex;
   flex-direction: column;
   min-height: 0;
   position: relative;
   background: transparent;
+  z-index: 1;
+  
+  /* Responsive max-width */
+  @media (max-width: 1024px) {
+    max-width: min(800px, 95vw);
+  }
+  
+  @media (max-width: 768px) {
+    max-width: 100%;
+  }
 
   /* Responsive padding for greeting message positioning - full screen */
   @media (max-width: 1200px) {
@@ -481,52 +510,75 @@ export const MessagesInnerContainer = styled.div`
 
 export const MainContentArea = styled.div`
   height: 100vh;
+  height: calc(var(--vh, 1vh) * 100);
+  max-height: 100vh;
+  max-height: calc(var(--vh, 1vh) * 100);
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: ${props => props.$isDarkMode ? '#212121' : '#ffffff'};
+  background: ${props => props.$isDarkMode ? '#212121' : '#f8f8f7'};
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100vw;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   @media (max-width: 768px) {
     width: 100%;
+    max-width: 100vw;
+    /* Prevent content from being pushed when sidebar opens */
+    position: relative;
+    z-index: 1;
+  }
+  
+  /* Landscape mode */
+  @media (orientation: landscape) and (max-height: 500px) {
+    height: 100vh;
+    max-height: 100vh;
   }
 `;
 
 export const MessageContainer = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px; /* Adds space between messages */
-  padding: 0.75rem 0.5rem; /* Minimal horizontal padding for hover effects */
+  gap: clamp(0.5rem, 1vw, 0.75rem);
+  padding: clamp(0.5rem, 1vw, 0.75rem) clamp(0.25rem, 0.5vw, 0.5rem);
   overflow: visible;
+  width: 100%;
+  max-width: 100%;
 
-  /* Reduce horizontal padding on smaller screens */
+  /* Responsive padding with fluid units */
   @media (max-width: 768px) {
-    padding: 0.75rem 0.25rem;
-  }
-
-  @media (max-width: 640px) {
-    padding: 0.75rem 0.2rem;
+    padding: clamp(0.5rem, 1vw, 0.75rem) clamp(0.15rem, 0.4vw, 0.25rem);
   }
 
   @media (max-width: 480px) {
-    padding: 0.75rem 0.15rem;
-  }
-
-  @media (max-width: 414px) {
-    padding: 0.75rem 0.1rem;
-  }
-
-  @media (max-width: 375px) {
-    padding: 0.75rem 0.05rem;
+    padding: clamp(0.4rem, 0.8vw, 0.6rem) clamp(0.1rem, 0.3vw, 0.15rem);
   }
 
   @media (max-width: 360px) {
-    padding: 0.75rem 0.025rem;
+    padding: clamp(0.3rem, 0.6vw, 0.5rem) clamp(0.05rem, 0.2vw, 0.1rem);
   }
+`;
 
-  @media (max-width: 320px) {
-    padding: 0.75rem 0;
+export const ChatTitle = styled.div`
+  padding: clamp(1rem, 2vw, 1.5rem) clamp(1.5rem, 3vw, 2rem);
+  background: ${props => props.$isDarkMode ? '#000000' : '#f8f8f7'};
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: clamp(3rem, 5vw, 2.5rem);
+  font-weight: 700;
+  color: ${props => props.$isDarkMode ? '#ffffff' : '#000000'};
+  flex-shrink: 0;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  
+  @media (max-width: 768px) {
+    padding: clamp(0.75rem, 2vw, 1rem) clamp(1rem, 2.5vw, 1.5rem);
+    font-size: clamp(1.25rem, 3vw, 1.75rem);
+    gap: 0.75rem;
   }
 `;

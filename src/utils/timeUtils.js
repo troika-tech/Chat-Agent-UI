@@ -18,7 +18,7 @@ export function getTimeBasedGreeting() {
   const eveningGreetings = [
     "Good evening! How can I help you with AI solutions today?",
     "Hey! I'm here to help you discover AI-powered tools for your business.",
-    "Good evening! Ready to explore what Troika Tech has to offer?"
+    "Good evening! Ready to explore what Raymond Realty has to offer?"
   ];
 
   const lateNightGreetings = [

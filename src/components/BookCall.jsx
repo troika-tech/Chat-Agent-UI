@@ -4,7 +4,6 @@ import { InlineWidget } from "react-calendly";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import Sidebar from "./Sidebar";
-import ChatHeader from "./ChatHeader";
 import { useBattery } from "../hooks/useBattery";
 import { useClock } from "../hooks/useClock";
 import GlobalStyle from "../styles/GlobalStyles";
@@ -117,6 +116,7 @@ function BookCall() {
         <Sidebar
           isOpen={sidebarOpen}
           onClose={handleSidebarClose}
+          onToggle={handleSidebarToggle}
           onSocialMediaClick={handleSocialMediaClick}
           onTabNavigation={handleTabNavigation}
         />
@@ -124,17 +124,6 @@ function BookCall() {
         {/* Main Content Area */}
         <MainContentArea $isDarkMode={isDarkMode} $sidebarOpen={sidebarOpen}>
           <Chatbox $isDarkMode={isDarkMode}>
-            <ChatHeader
-              currentTime={currentTime}
-              batteryLevel={batteryLevel}
-              isCharging={isCharging}
-              chatbotLogo="https://raw.githubusercontent.com/troika-tech/Asset/refs/heads/main/Supa%20Agent%20new.png"
-              isMuted={isMuted}
-              toggleMute={toggleMute}
-              onSidebarToggle={handleSidebarToggle}
-              sidebarOpen={sidebarOpen}
-            />
-
             <BookCallContentContainer $isDarkMode={isDarkMode}>
               <ContentWrapper>
                 <Title $isDarkMode={isDarkMode}>Book a Call</Title>

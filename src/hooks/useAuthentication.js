@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { sendOTP as apiSendOTP, verifyOTP as apiVerifyOTP } from '../services/api';
 
-const useAuthentication = (apiBase) => {
+const useAuthentication = (apiBase, chatbotId) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authToken, setAuthToken] = useState(null);
   const [userInfo, setUserInfo] = useState(null);
@@ -45,7 +46,8 @@ const useAuthentication = (apiBase) => {
     }
   }, [resendCooldown]);
 
-  const sendOtp = useCallback(async (phone) => {
+  // OTP Authentication - COMMENTED OUT
+  /* const sendOtp = useCallback(async (phone) => {
     try {
       setLoading(true);
       setError(null);
@@ -94,9 +96,35 @@ const useAuthentication = (apiBase) => {
     } finally {
       setLoading(false);
     }
-  }, [apiBase]);
+  }, [apiBase]); */
+  
+  // Send OTP using new API
+  const sendOtp = useCallback(async (phone) => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const verifyOtp = useCallback(async (otp, phone) => {
+      if (!chatbotId) {
+        throw new Error('Chatbot ID is required');
+      }
+
+      const data = await apiSendOTP(apiBase, chatbotId, phone);
+
+      // Start resend cooldown
+      setResendCooldown(60); // 60 seconds cooldown
+
+      return data;
+    } catch (error) {
+      console.error('Error sending OTP:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [apiBase, chatbotId]);
+
+  // OTP Authentication - COMMENTED OUT
+  /* const verifyOtp = useCallback(async (otp, phone) => {
     try {
       setLoading(true);
       setError(null);
@@ -154,7 +182,53 @@ const useAuthentication = (apiBase) => {
     } finally {
       setLoading(false);
     }
-  }, [apiBase]);
+  }, [apiBase]); */
+  
+  // Verify OTP using new API
+  const verifyOtp = useCallback(async (otp, phone) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!chatbotId) {
+        throw new Error('Chatbot ID is required');
+      }
+
+      const data = await apiVerifyOTP(apiBase, chatbotId, phone, otp);
+
+      if (phone) {
+        try {
+          localStorage.setItem('chatbot_user_phone', phone);
+        } catch (storageError) {
+          console.warn('Failed to persist verified phone number:', storageError);
+        }
+      }
+      
+      // Save authentication data
+      const authData = {
+        token: data.data?.token || data.token,
+        userInfo: {
+          phone: data.data?.phone || phone,
+          verified: true,
+        },
+        expires: Date.now() + (30 * 24 * 60 * 60 * 1000) // 30 days
+      };
+
+      localStorage.setItem('chatbot_auth', JSON.stringify(authData));
+
+      setAuthToken(authData.token);
+      setUserInfo(authData.userInfo);
+      setIsAuthenticated(true);
+
+      return data;
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [apiBase, chatbotId]);
 
   const logout = useCallback(() => {
     localStorage.removeItem('chatbot_auth');
@@ -165,6 +239,18 @@ const useAuthentication = (apiBase) => {
     setError(null);
   }, []);
 
+  // OTP Authentication - COMMENTED OUT
+  /* const resendOtp = useCallback(async (phone) => {
+    if (resendCooldown > 0) return;
+    
+    try {
+      await sendOtp(phone);
+    } catch (error) {
+      // Error is already handled in sendOtp
+    }
+  }, [sendOtp, resendCooldown]); */
+  
+  // Resend OTP
   const resendOtp = useCallback(async (phone) => {
     if (resendCooldown > 0) return;
     

@@ -24,9 +24,34 @@ export const ThemeProvider = ({ children }) => {
     setIsDarkMode(prev => !prev);
   };
 
+  // Responsive breakpoints
+  const breakpoints = {
+    mobile: '360px',      // Mobile: 360px-480px
+    mobileLarge: '480px', // Mobile Large
+    tablet: '768px',      // Tablet
+    laptop: '1024px',      // Laptop
+    desktop: '1280px',     // Desktop
+  };
+
+  // Media query helpers
+  const media = {
+    mobile: `@media (max-width: ${breakpoints.mobileLarge})`,
+    tablet: `@media (min-width: ${breakpoints.mobileLarge}) and (max-width: ${breakpoints.tablet})`,
+    laptop: `@media (min-width: ${breakpoints.tablet}) and (max-width: ${breakpoints.laptop})`,
+    desktop: `@media (min-width: ${breakpoints.laptop})`,
+    maxMobile: `@media (max-width: ${breakpoints.tablet})`,
+    maxTablet: `@media (max-width: ${breakpoints.laptop})`,
+    minTablet: `@media (min-width: ${breakpoints.tablet})`,
+    minLaptop: `@media (min-width: ${breakpoints.laptop})`,
+    minDesktop: `@media (min-width: ${breakpoints.desktop})`,
+    landscape: `@media (orientation: landscape) and (max-height: 500px)`,
+  };
+
   const theme = {
     isDarkMode,
     toggleTheme,
+    breakpoints,
+    media,
     colors: isDarkMode ? {
       // Dark mode colors
       background: '#1a1a1a',

@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { FaVolumeUp, FaStopCircle } from "react-icons/fa";
 import { useTheme } from "../contexts/ThemeContext";
 import InlineCalendlyWidget from "./InlineCalendlyWidget";
+import ProductCardsDisplay from "./ProductCardsDisplay";
 
 const MessageWrapper = styled.div`
   display: flex;
@@ -32,27 +33,41 @@ const MessageContainer = styled.div`
   display: flex;
   flex-direction: column;
   order: ${(props) => (props.$isUser ? "2" : "1")};
+  width: 100%;
+  align-items: ${(props) => (props.$isUser ? "flex-end" : "flex-start")};
+
+  @media (max-width: 1024px) {
+    max-width: ${(props) => (props.$isPricing || props.$isSales ? "100%" : "80%")};
+  }
 
   @media (max-width: 768px) {
     max-width: ${(props) => (props.$isPricing || props.$isSales ? "100%" : props.$isUser ? "75%" : "95%")};
   }
+  
+  @media (max-width: 480px) {
+    max-width: ${(props) => (props.$isPricing || props.$isSales ? "100%" : props.$isUser ? "80%" : "98%")};
+  }
+  
+  @media (max-width: 360px) {
+    max-width: ${(props) => (props.$isPricing || props.$isSales ? "100%" : "100%")};
+  }
 `;
 
 const MessageBubble = styled.div`
-  padding: ${(props) => (props.$isPricing || props.$isSales ? "0" : props.$isUser ? "0.875rem 1rem" : "0")};
-  border-radius: ${(props) => (props.$isUser ? "24px" : "0")};
-  font-size: 1rem;
-  line-height: 1.4;
+  padding: ${(props) => (props.$isPricing || props.$isSales ? "0" : props.$isUser ? "clamp(0.75rem, 1.5vw, 0.875rem) clamp(0.875rem, 2vw, 1rem)" : "0")};
+  border-radius: ${(props) => (props.$isUser ? "clamp(20px, 3vw, 24px)" : "0")};
+  font-size: clamp(0.9375rem, 1.5vw, 1rem);
+  line-height: clamp(1.35, 0.1vw + 1.3, 1.4);
   word-wrap: ${(props) => (props.$isUser ? "break-word" : "normal")};
   overflow-wrap: ${(props) => (props.$isUser ? "break-word" : "normal")};
-  white-space: ${(props) => (props.$isUser ? "nowrap" : "normal")};
-  hyphens: ${(props) => (props.$isUser ? "auto" : "none")};
-  word-break: ${(props) => (props.$isUser ? "break-word" : "normal")};
+  white-space: normal;
+  hyphens: auto;
+  word-break: break-word;
   position: relative;
-  margin: ${(props) => (props.$isUser ? "0.5rem 0" : "0.25rem 0")};
-  width: ${(props) => (props.$isUser ? "auto" : "100%")};
-  max-width: 100%;
-  min-width: ${(props) => (props.$isUser ? "200px" : "60px")};
+  margin: ${(props) => (props.$isUser ? "clamp(0.4rem, 1vw, 0.5rem) 0" : "clamp(0.2rem, 0.5vw, 0.25rem) 0")};
+  width: ${(props) => (props.$isUser ? "fit-content" : "100%")};
+  max-width: ${(props) => (props.$isUser ? "80%" : "100%")};
+  min-width: ${(props) => (props.$isUser ? "auto" : "clamp(50px, 5vw, 60px)")};
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   box-shadow: ${(props) => (props.$isPricing || props.$isSales || !props.$isUser ? 'none' : '0 10px 40px rgba(0, 0, 0, 0.15)')};
   transform: scale(1);
@@ -60,32 +75,39 @@ const MessageBubble = styled.div`
 
   /* Increased min-width for bot messages on big screens - following Reference.jsx approach */
   @media (min-width: 1200px) {
-    min-width: ${(props) => (props.$isUser ? "200px" : "300px")};
+    min-width: ${(props) => (props.$isUser ? "auto" : "300px")};
   }
 
   @media (min-width: 1400px) {
-    min-width: ${(props) => (props.$isUser ? "200px" : "350px")};
+    min-width: ${(props) => (props.$isUser ? "auto" : "350px")};
   }
 
   @media (min-width: 1600px) {
-    min-width: ${(props) => (props.$isUser ? "200px" : "400px")};
+    min-width: ${(props) => (props.$isUser ? "auto" : "400px")};
   }
 
   &:hover {
     transform: ${(props) => (props.$isUser ? "scale(1.02)" : "scale(1)")};
   }
 
-  /* Better mobile spacing */
+  /* Better mobile spacing with fluid units */
+  @media (max-width: 768px) {
+    font-size: clamp(0.9rem, 2vw, 0.95rem);
+    line-height: clamp(1.3, 0.1vw + 1.25, 1.35);
+  }
+
   @media (max-width: 480px) {
-    margin: ${(props) => (props.$isUser ? "0.4rem 0" : "0.2rem 0")};
-    min-width: ${(props) => (props.$isUser ? "150px" : "50px")};
-    padding: ${(props) => (props.$isUser ? "0.75rem 0.875rem" : "0")};
+    margin: ${(props) => (props.$isUser ? "clamp(0.3rem, 0.8vw, 0.4rem) 0" : "clamp(0.15rem, 0.4vw, 0.2rem) 0")};
+    min-width: ${(props) => (props.$isUser ? "auto" : "clamp(40px, 4vw, 50px)")};
+    padding: ${(props) => (props.$isUser ? "clamp(0.625rem, 1.25vw, 0.75rem) clamp(0.75rem, 1.5vw, 0.875rem)" : "0")};
+    font-size: clamp(0.875rem, 2.5vw, 0.9rem);
   }
 
   @media (max-width: 360px) {
-    margin: ${(props) => (props.$isUser ? "0.3rem 0" : "0.15rem 0")};
-    min-width: ${(props) => (props.$isUser ? "120px" : "40px")};
-    padding: ${(props) => (props.$isUser ? "0.625rem 0.75rem" : "0")};
+    margin: ${(props) => (props.$isUser ? "clamp(0.25rem, 0.6vw, 0.3rem) 0" : "clamp(0.1rem, 0.3vw, 0.15rem) 0")};
+    min-width: ${(props) => (props.$isUser ? "auto" : "clamp(35px, 3vw, 40px)")};
+    padding: ${(props) => (props.$isUser ? "clamp(0.5rem, 1vw, 0.625rem) clamp(0.625rem, 1.25vw, 0.75rem)" : "0")};
+    font-size: clamp(0.8125rem, 3vw, 0.875rem);
   }
 
   ${({ $isUser, $isDarkMode, $isPricing }) =>
@@ -99,9 +121,10 @@ const MessageBubble = styled.div`
   `
       : $isUser
       ? `
-    background: linear-gradient(to right, #3b82f6, #8b5cf6);
-    color: #ffffff;
+    background: #ffffff;
+    color: #1f2937;
     border-radius: 24px 24px 4px 24px;
+    border: 1px solid #e5e7eb;
   `
       : `
     background: transparent;
@@ -123,8 +146,21 @@ const MessageContent = styled.div`
   max-width: 100%;
   word-spacing: ${(props) => (props.$isUser ? "normal" : "0.05em")};
   letter-spacing: ${(props) => (props.$isUser ? "normal" : "0.005em")};
-  color: ${(props) => (props.$isUser ? "inherit" : props.$isDarkMode ? '#f3f4f6' : '#374151')};
-  font-size: 1rem;
+  color: ${(props) => (props.$isUser ? "#1f2937" : props.$isDarkMode ? '#f3f4f6' : '#374151')};
+  font-size: clamp(0.9375rem, 1.5vw, 1rem);
+  
+  /* Responsive font sizing */
+  @media (max-width: 768px) {
+    font-size: clamp(0.9rem, 2vw, 0.95rem);
+  }
+  
+  @media (max-width: 480px) {
+    font-size: clamp(0.875rem, 2.5vw, 0.9rem);
+  }
+  
+  @media (max-width: 360px) {
+    font-size: clamp(0.8125rem, 3vw, 0.875rem);
+  }
 
   /* Prevent pre-wrap from forcing line breaks inside lists */
   ol, ul, li {
@@ -391,7 +427,7 @@ const BotName = styled.span`
 const Timestamp = styled.span`
   font-size: 0.75rem;
   color: ${props => props.$isUser
-    ? 'rgba(191, 219, 254, 1)'
+    ? '#6b7280'
     : props.$isDarkMode ? '#9ca3af' : '#9ca3af'};
   margin-top: 0.75rem;
   display: block;
@@ -407,9 +443,16 @@ const MessageBubbleComponent = ({
   currentlyPlaying,
   playAudio,
   onSuggestionClick,
-  onCalendlyEventScheduled
+  onCalendlyEventScheduled,
+  chatbotId, // Add chatbotId prop to control product display
+  assistantName,
+  assistantAvatarUrl,
 }) => {
   const { isDarkMode } = useTheme();
+
+  // Dipson chatbot ID - only show product images for this specific chatbot
+  const DIPSON_CHATBOT_ID = "691ae709971ecb8e8d0efb06";
+  const shouldShowProducts = chatbotId === DIPSON_CHATBOT_ID;
 
   // Check if this is a pricing or sales message that needs HTML rendering
   const isPricingMessage = !isUser && message.text && (
@@ -445,19 +488,21 @@ const MessageBubbleComponent = ({
   return (
     <MessageWrapper $isUser={isUser}>
       <MessageContainer $isUser={isUser} $isPricing={isPricingMessage} $isSales={isSalesMessage}>
-        {/* Show AI Assistant header OUTSIDE bubble for bot messages */}
+        {/* Show Assistant header OUTSIDE bubble for bot messages */}
         {!isUser && (
           <BotHeader>
             <BotAvatar>
-                <BotAvatarImage
-                  src="/logo.png"
-                  alt="AI"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                  }}
-                />
+                {assistantAvatarUrl && (
+                  <BotAvatarImage
+                    src={assistantAvatarUrl}
+                    alt={assistantName || "Assistant"}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
+                  />
+                )}
             </BotAvatar>
-            <BotName $isDarkMode={isDarkMode}>AI Assistant</BotName>
+            <BotName $isDarkMode={isDarkMode}>{assistantName || "Ai Assistant"}</BotName>
           </BotHeader>
         )}
 
@@ -607,6 +652,11 @@ const MessageBubbleComponent = ({
               }
             </Timestamp>
           </MessageBubble>
+        )}
+
+        {/* Product Cards Display - shown ONLY for Dipson chatbot with product_cards metadata */}
+        {!isUser && shouldShowProducts && message.metadata?.product_cards && (
+          <ProductCardsDisplay cards={message.metadata.product_cards} />
         )}
 
         {/* Audio play button outside bubble */}

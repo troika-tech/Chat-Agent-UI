@@ -1,16 +1,16 @@
 import SupaChatbot from "./components/SupaChatbot"
 import ScheduleMeeting from "./components/ScheduleMeeting"
+import EmailServicesPage from "./components/EmailServicesPage"
+import WhatsAppProposalsPage from "./components/WhatsAppProposalsPage"
 import React from "react"
 import { BrowserRouter, Routes, Route } from "react-router-dom"
-// COMMENTED OUT: Not needed for inline auth
-// import AuthModal from "./components/AuthModal"
-// import useAuthentication from "./hooks/useAuthentication"
 import { ThemeProvider } from "./contexts/ThemeContext"
+import { AuthProvider } from "./contexts/AuthContext"
 
 // Constants for chatbot configuration
-const CHATBOT_ID = "68ff51efd9538341c9e1e34c"
-const API_BASE = "https://api.0804.in/api"
-// const API_BASE = "http://localhost:5000/api"
+const CHATBOT_ID = "692949c1b8c1bfbed87e7dff"
+//const API_BASE = "https://chat-api.0804.in/api"
+const API_BASE = "http://localhost:5000/api"
 
 // Development mode - set to true to bypass authentication during development
 // COMMENTED OUT: Using inline authentication after 2 bot messages instead of full-screen auth
@@ -133,42 +133,47 @@ function AuthenticationGate({ children }) {
   return children;
 } */
 
+
 function App() {
   return (
     <ThemeProvider>
-      <BrowserRouter>
-        <ErrorBoundary>
-          {/* REMOVED AuthenticationGate - Using inline auth after 2 bot messages instead */}
-          <Routes>
-            <Route path="/" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/new-chat" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/home" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/who-is-troika" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/what-is-ai-agent" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/how-it-works" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/use-case-for-me" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/pricing-setup" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/ai-websites" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/ai-calling" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/ai-whatsapp" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/ai-telegram" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/industry-use-cases" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/social-media" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/pricing" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/sales" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/marketing" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/about" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/features" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/roi" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            {/* New sidebar routes */}
-            <Route path="/ai-agent" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/ai-calling-agent" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/get-quote" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-            <Route path="/schedule-meeting" element={<ScheduleMeeting />} />
-            <Route path="/book-call" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
-          </Routes>
-        </ErrorBoundary>
-      </BrowserRouter>
+      <AuthProvider apiBase={API_BASE}>
+        <BrowserRouter>
+          <ErrorBoundary>
+            <Routes>
+              {/* All routes are now public - no authentication required */}
+              <Route path="/" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/chat" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/new-chat" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/home" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/who-is-troika" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/what-is-ai-agent" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/how-it-works" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/use-case-for-me" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/pricing-setup" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/ai-websites" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/ai-calling" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/ai-whatsapp" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/ai-telegram" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/industry-use-cases" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/social-media" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/pricing" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/sales" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/marketing" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/about" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/features" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/roi" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/ai-agent" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/ai-calling-agent" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/get-quote" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/schedule-meeting" element={<ScheduleMeeting chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/email-services" element={<EmailServicesPage chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/whatsapp-proposals" element={<WhatsAppProposalsPage chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+              <Route path="/book-call" element={<SupaChatbot chatbotId={CHATBOT_ID} apiBase={API_BASE} />} />
+            </Routes>
+          </ErrorBoundary>
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

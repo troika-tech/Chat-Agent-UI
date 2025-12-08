@@ -81,22 +81,28 @@ const QuestionButton = styled.button`
 
 const questionsByPage = {
   'home': [
-    'What is WhatsApp Marketing?',
-    'What are the charges?',
-    'Can I see the demo?',
-    'Is it a WhatsApp API?'
+    'What is PlastiWorld?',
+    'What are the dates for PlastiWorld 2026?',
+    'When and where is PlastiWorld 2026 happening?',
+    'How do I register as an exhibitor or as a buyer/visitor?'
   ],
-  'ai-agent': [
-    'How is your AI Agent different from a normal chatbot?',
-    'Can it handle chats, WhatsApp, and calls together as one system?',
-    'How long does it take to set up my own AI Agent?',
-    'Will the AI sound human and understand different languages?'
+  'project-information': [
+    'What are the available unit sizes?',
+    'When is the expected possession date?',
+    'Is the project RERA-registered?',
+    'What amenities are included?'
   ],
-  'ai-calling-agent': [
-    'Does your AI Calling Agent sound like a real person or a robot?',
-    'Can it make outbound calls and answer incoming calls too?',
-    'What\'s the cost per minute and setup charge for the calling agent?',
-    'Can it speak in Indian languages like Hindi or Marathi for my customers?'
+  'pricing-payment': [
+    'What is the starting price of the units?',
+    'Do you offer any payment schemes?',
+    'Are there any current offers or discounts?',
+    'What are the additional charges?'
+  ],
+  'location-connectivity': [
+    'How far is the project from major landmarks?',
+    'What schools and hospitals are nearby?',
+    'Is public transport easily accessible?',
+    'Are there upcoming developments in the area?'
   ]
 };
 
@@ -116,7 +122,11 @@ const ServiceSuggestions = ({ onQuestionClick, isWelcomeMode, activePage }) => {
           <QuestionButton
             key={index}
             $isDarkMode={isDarkMode}
-            onClick={() => onQuestionClick(question)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onQuestionClick(question);
+            }}
           >
             <FiMessageCircle />
             {question}

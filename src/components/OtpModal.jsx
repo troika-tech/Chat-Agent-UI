@@ -219,6 +219,8 @@ const ModalAvatarImage = styled.img`
   width: 100%;
   height: 100%;
   object-fit: contain;
+  object-position: center;
+  display: block;
 `;
 
 const ModalTitle = styled.h2`
@@ -550,15 +552,15 @@ const OtpModal = ({
           <ModalHeader>
             <ModalAvatar $isDarkMode={isDarkMode}>
               <ModalAvatarImage
-                src="/logo.png"
-                alt="AI"
+                src="/plastiworldlogo.png"
+                alt="Plasticworld"
                 onError={(e) => {
                   e.target.style.display = 'none';
                 }}
               />
             </ModalAvatar>
             <ModalTitle $isDarkMode={isDarkMode}>
-              <ShinyText text="AI Agent" speed={3} />
+              <ShinyText text="Deeksha Vedantu" speed={3} />
             </ModalTitle>
             <ModalSubtitle $isDarkMode={isDarkMode}>
               Your Intelligent Business Assistant

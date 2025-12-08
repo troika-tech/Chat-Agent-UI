@@ -320,15 +320,30 @@ export function useStreamingChat(options) {
             setError(error.message || 'Connection error');
             setIsStreaming(false);
 
-            // Call error callback
-            onError?.({ message: error.message, code: 'CONNECTION_ERROR' });
+            // Check if it's a credit error even in connection errors
+            const errorMessage = error?.message || String(error || '');
+            const isCreditError = errorMessage.toLowerCase().includes('credit') || 
+                                 errorMessage.toLowerCase().includes('exhausted');
+            
+            // Call error callback with proper format
+            onError?.(isCreditError 
+              ? { message: 'Credit Exhausted Please Contact to support team', error: 'CREDITS_EXHAUSTED' }
+              : { message: error.message, code: 'CONNECTION_ERROR' });
           },
         });
       } catch (error) {
         console.error('Failed to start streaming:', error);
         setError(error.message || 'Failed to start streaming');
         setIsStreaming(false);
-        onError?.({ message: error.message, code: 'STREAM_START_ERROR' });
+        
+        // Check if it's a credit error
+        const errorMessage = error?.message || String(error || '');
+        const isCreditError = errorMessage.toLowerCase().includes('credit') || 
+                             errorMessage.toLowerCase().includes('exhausted');
+        
+        onError?.(isCreditError 
+          ? { message: 'Credit Exhausted Please Contact to support team', error: 'CREDITS_EXHAUSTED' }
+          : { message: error.message, code: 'STREAM_START_ERROR' });
       }
     },
     [apiBase, chatbotId, sessionId, phone, name, enableTTS, isMuted, isStreaming, onComplete, onError]

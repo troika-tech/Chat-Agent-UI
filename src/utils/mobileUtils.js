@@ -5,17 +5,24 @@
  * @returns {boolean} True if device is mobile
  */
 export const isMobileDevice = () => {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  // First check CSS custom property set by loader (most reliable)
+  const cssIsMobile = document.documentElement.getAttribute('data-is-mobile');
+  if (cssIsMobile === 'true') return true;
+  if (cssIsMobile === 'false') return false;
+  
+  // Fallback to multiple detection methods
+  const width = window.innerWidth || document.documentElement.clientWidth || window.screen.width;
+  const height = window.innerHeight || document.documentElement.clientHeight || window.screen.height;
   
   // Enhanced mobile detection
   const isMobileWidth = width < 768;
   const isMobileHeight = height < 1024;
-  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+  const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i.test(navigator.userAgent);
+  const isSmallScreen = width <= 480 || (width <= 768 && height <= 1024);
   
-  // Consider it mobile if any of these conditions are true
-  return isMobileWidth || (isMobileHeight && isTouchDevice) || isMobileUserAgent;
+  // Consider it mobile if: width < 768 OR (touch device AND small screen) OR mobile user agent
+  return isMobileWidth || (isTouchDevice && isSmallScreen) || isMobileUserAgent;
 };
 
 /**

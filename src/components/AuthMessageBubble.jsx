@@ -216,7 +216,9 @@ const Timestamp = styled.span`
 const AuthMessageBubble = ({
   onSendOtp,
   loading,
-  error
+  error,
+  assistantName,
+  assistantAvatarUrl,
 }) => {
   const { isDarkMode } = useTheme();
   const [phone, setPhone] = useState('');
@@ -233,18 +235,20 @@ const AuthMessageBubble = ({
   return (
     <MessageWrapper>
       <MessageContainer>
-        {/* Show AI Assistant header OUTSIDE bubble */}
+        {/* Show Assistant header OUTSIDE bubble */}
         <BotHeader>
           <BotAvatar>
-            <BotAvatarImage
-              src="/logo.png"
-              alt="AI"
-              onError={(e) => {
-                e.target.style.display = 'none';
-              }}
-            />
+            {assistantAvatarUrl && (
+              <BotAvatarImage
+                src={assistantAvatarUrl}
+                alt={assistantName || "Assistant"}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            )}
           </BotAvatar>
-          <BotName $isDarkMode={isDarkMode}>AI Assistant</BotName>
+          <BotName $isDarkMode={isDarkMode}>{assistantName || "Ai Assistant"}</BotName>
         </BotHeader>
 
         <MessageBubble $isDarkMode={isDarkMode}>

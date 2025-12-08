@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import styled from 'styled-components';
-import { FaTimes, FaInstagram, FaYoutube, FaFacebook, FaTwitter } from 'react-icons/fa';
+import { FaTimes, FaInstagram, FaYoutube, FaFacebook } from 'react-icons/fa';
 import { useTheme } from '../contexts/ThemeContext';
 
 const PanelOverlay = styled.div`
@@ -229,7 +229,11 @@ const SocialFeedPanel = ({ isOpen, onClose, platform }) => {
       case 'instagram': return <FaInstagram />;
       case 'youtube': return <FaYoutube />;
       case 'facebook': return <FaFacebook />;
-      case 'twitter': return <FaTwitter />;
+      case 'twitter': return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+      );
       default: return <FaInstagram />;
     }
   };
@@ -237,13 +241,13 @@ const SocialFeedPanel = ({ isOpen, onClose, platform }) => {
   const getEmbedUrl = () => {
     switch(platform) {
       case 'instagram':
-        return 'https://www.instagram.com/troikatechindia/embed/';
+        return 'https://www.instagram.com/deekshavedantu_/embed/';
       case 'youtube':
-        return 'https://www.youtube.com/@TroikaDombivali/';
+        return 'https://www.youtube.com/@deekshakarnataka/';
       case 'facebook':
-        return 'https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Ftroikatechservices&tabs=timeline&width=500&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId';
+        return 'https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2FDeekshaVedantu%2F&tabs=timeline&width=500&height=600&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId';
       case 'twitter':
-        return 'https://syndication.twitter.com/i/timeline/profile?screen_name=troikatech_in&theme=dark';
+        return 'https://syndication.twitter.com/i/timeline/profile?screen_name=deekshanetwork&theme=dark';
       default:
         return '';
     }

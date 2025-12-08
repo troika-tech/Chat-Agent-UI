@@ -112,16 +112,16 @@ const SuggestionItem = styled.button`
 
 // Default suggestions shown on click/focus
 const defaultSuggestions = [
-  'What is Troika Tech?',
+  'What is Raymond Realty?',
   'How can AI help my business?',
-  'What services does Troika Tech offer?'
+  'What services does Raymond Realty offer?'
 ];
 
 // Smart suggestion database - All available suggestions
 const suggestionDatabase = {
   general: [
-    'What is Troika Tech?',
-    'What services does Troika Tech offer?',
+    'What is Raymond Realty?',
+    'What services does Raymond Realty offer?',
     'What is AI automation?',
     'What are the benefits of AI agents?',
     'How does AI automation work?',

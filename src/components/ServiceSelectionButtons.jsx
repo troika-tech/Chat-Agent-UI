@@ -141,7 +141,7 @@ const TextContainer = styled.div`
 const ServiceSelectionButtons = ({ onServiceClick, isVisible }) => {
   const services = [
     { text: "AI Website", value: "AI Website" },
-    { text: "Supa Agent", value: "Supa Agent" },
+    { text: "Raymond Realty", value: "Raymond Realty" },
     { text: "RCS Messaging", value: "RCS Messaging" },
   ];
 

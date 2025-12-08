@@ -6,14 +6,14 @@ const GlobalStyle = createGlobalStyle`
       box-sizing: border-box;
     }
     
-    /* Normalize font sizes between dev and production */
+    /* Fluid typography with responsive base */
     html {
-      font-size: 16px !important;
+      font-size: clamp(14px, 1vw + 0.5rem, 16px) !important;
     }
     
     body {
-      font-size: 16px !important;
-      line-height: 1.5 !important;
+      font-size: clamp(14px, 1vw + 0.5rem, 16px) !important;
+      line-height: clamp(1.4, 0.1vw + 1.3, 1.5) !important;
     }
 
     /* Mobile viewport optimization - Enhanced */
@@ -36,6 +36,18 @@ const GlobalStyle = createGlobalStyle`
       /* Prevent browser zoom differences */
       zoom: 1 !important;
       transform: scale(1) !important;
+    }
+    
+    /* Force mobile styles when data-is-mobile="true" */
+    html[data-is-mobile="true"] {
+      /* Ensure viewport is set correctly */
+      font-size: 16px !important;
+    }
+    
+    /* Mobile detection CSS custom property support */
+    html[data-is-mobile="true"] * {
+      /* Force mobile-friendly touch targets */
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
     }
 
 
@@ -62,12 +74,12 @@ const GlobalStyle = createGlobalStyle`
       transform: scale(1) !important;
     }
 
-    /* Prevent zoom on input focus for mobile */
+    /* Prevent zoom on input focus for mobile - use clamp for responsive sizing */
     input[type="text"], 
     input[type="email"], 
     input[type="tel"], 
     textarea {
-      font-size: 16px !important;
+      font-size: clamp(16px, 1vw + 0.5rem, 16px) !important;
       
       @media (max-width: 480px) {
         font-size: 16px !important; /* Prevents zoom on iOS */
@@ -109,14 +121,27 @@ const GlobalStyle = createGlobalStyle`
       user-drag: none;
     }
 
-    /* Enhanced touch targets for mobile */
+    /* Enhanced touch targets for mobile - responsive sizing */
     @media (max-width: 768px) {
       button, 
       input, 
       textarea, 
       select {
-        min-height: 44px; /* iOS recommended minimum touch target */
-        min-width: 44px;
+        min-height: clamp(40px, 2vw, 44px); /* iOS recommended minimum touch target */
+        min-width: clamp(40px, 2vw, 44px);
+        padding: clamp(0.5rem, 1vw, 0.75rem) clamp(0.75rem, 2vw, 1rem);
+      }
+    }
+    
+    /* Extra small mobile devices */
+    @media (max-width: 360px) {
+      button, 
+      input, 
+      textarea, 
+      select {
+        min-height: 40px;
+        min-width: 40px;
+        padding: 0.5rem 0.75rem;
       }
     }
 
@@ -131,12 +156,26 @@ const GlobalStyle = createGlobalStyle`
       -ms-user-select: text;
       user-select: text;
     }
+    
+    /* Responsive images - ensure all images scale properly */
+    img {
+      max-width: 100%;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
+    
+    /* Responsive iframes and embedded content */
+    iframe, embed, object, video {
+      max-width: 100%;
+      height: auto;
+    }
   
-    /* Cosmic Circle Pulse Animation */
+    /* Cosmic Circle Pulse Animation - Responsive sizing */
   .cosmic-circle {
     position: relative;
-    width: 200px;
-    height: 200px;
+    width: clamp(100px, 15vw, 200px);
+    height: clamp(100px, 15vw, 200px);
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -144,8 +183,8 @@ const GlobalStyle = createGlobalStyle`
   }
   
   .cosmic-core {
-    width: 40px;
-    height: 40px;
+    width: clamp(20px, 3vw, 40px);
+    height: clamp(20px, 3vw, 40px);
     border-radius: 50%;
     background: radial-gradient(circle, #ffffff 0%, #60a5fa 30%, #a855f7 70%, transparent 100%);
     box-shadow: 
@@ -165,22 +204,22 @@ const GlobalStyle = createGlobalStyle`
   }
   
   .pulse-ring-1 {
-    width: 80px;
-    height: 80px;
+    width: clamp(50px, 6vw, 80px);
+    height: clamp(50px, 6vw, 80px);
     border-color: rgba(96, 165, 250, 0.6);
     animation-delay: 0s;
   }
   
   .pulse-ring-2 {
-    width: 120px;
-    height: 120px;
+    width: clamp(75px, 9vw, 120px);
+    height: clamp(75px, 9vw, 120px);
     border-color: rgba(168, 85, 247, 0.4);
     animation-delay: 1s;
   }
   
   .pulse-ring-3 {
-    width: 160px;
-    height: 160px;
+    width: clamp(100px, 12vw, 160px);
+    height: clamp(100px, 12vw, 160px);
     border-color: rgba(255, 255, 255, 0.3);
     animation-delay: 2s;
   }
@@ -588,6 +627,16 @@ const GlobalStyle = createGlobalStyle`
   .auth-input::placeholder {
     @media (prefers-color-scheme: dark) {
       color: #999 !important;
+    }
+  }
+  
+  /* Spinner animation for loading states */
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
     }
   }
 `;

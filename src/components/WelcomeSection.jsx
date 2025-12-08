@@ -8,6 +8,21 @@ import { FaGlobe, FaBolt, FaRobot } from "react-icons/fa";
 
 import InputArea from "./InputArea";
 
+const BackgroundPattern = styled.div`
+  position: absolute;
+  inset: 0;
+  opacity: ${(props) => (props.$isDarkMode ? 0.15 : 0.4)};
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(
+    circle,
+    ${(props) => (props.$isDarkMode ? "#a8a29e" : "#a8a29e")} 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+  background-position: 0 0;
+`;
+
 const WelcomeContainer = styled.div`
   display: flex;
 
@@ -99,65 +114,72 @@ const WelcomeContainer = styled.div`
     padding: ${(props) =>
       props.$isSocialMedia
         ? "1rem 1rem 1.25rem 1rem"
-        : "0.75rem 1rem 1.25rem 1rem"};
-    justify-content: ${(props) =>
-      props.$isSocialMedia ? "flex-start" : "center"};
+        : "50px 1rem 0.75rem 1rem"};
+    justify-content: flex-start;
   }
 
   @media (max-width: 640px) {
     padding: ${(props) =>
       props.$isSocialMedia
         ? "0.75rem 0.75rem 1rem 0.75rem"
-        : "0.5rem 0.75rem 1rem 0.75rem"};
-    justify-content: ${(props) =>
-      props.$isSocialMedia ? "flex-start" : "center"};
+        : "50px 0.75rem 1rem 0.75rem"};
+    justify-content: flex-start;
   }
 
   @media (max-width: 600px) {
     padding: ${(props) =>
       props.$isSocialMedia
         ? "0.5rem 0.5rem 1rem 0.5rem"
-        : "0.5rem 0.5rem 1rem 0.5rem"};
-    justify-content: ${(props) =>
-      props.$isSocialMedia ? "flex-start" : "center"};
+        : "50px 0.5rem 1rem 0.5rem"};
+    justify-content: flex-start;
   }
 
   @media (max-width: 480px) {
     padding: ${(props) =>
       props.$isSocialMedia
         ? "0.5rem 0.4rem 1rem 0.4rem"
-        : "0.5rem 0.4rem 1rem 0.4rem"};
-    justify-content: ${(props) =>
-      props.$isSocialMedia ? "flex-start" : "center"};
+        : "50px 0.4rem 0.5rem 0.4rem"};
+    justify-content: flex-start;
   }
 
   @media (max-width: 414px) {
     padding: ${(props) =>
       props.$isSocialMedia
         ? "0.5rem 0.3rem 1rem 0.3rem"
-        : "0.5rem 0.3rem 1rem 0.3rem"};
-    justify-content: ${(props) =>
-      props.$isSocialMedia ? "flex-start" : "center"};
+        : "50px 0.3rem 1rem 0.3rem"};
+    justify-content: flex-start;
   }
 
   @media (max-width: 390px) {
-    padding: 0.5rem 0.25rem 1rem 0.25rem;
-    justify-content: center;
+    padding: ${(props) =>
+      props.$isSocialMedia
+        ? "0.5rem 0.25rem 1rem 0.25rem"
+        : "50px 0.25rem 1rem 0.25rem"};
+    justify-content: flex-start;
   }
 
   @media (max-width: 375px) {
-    padding: 0.5rem 0.2rem 1rem 0.2rem;
-    justify-content: center;
+    padding: ${(props) =>
+      props.$isSocialMedia
+        ? "0.5rem 0.2rem 1rem 0.2rem"
+        : "50px 0.2rem 1rem 0.2rem"};
+    justify-content: flex-start;
   }
 
   @media (max-width: 360px) {
-    padding: 0.5rem 0.15rem 1rem 0.15rem;
-    justify-content: center;
+    padding: ${(props) =>
+      props.$isSocialMedia
+        ? "0.5rem 0.15rem 1rem 0.15rem"
+        : "50px 0.15rem 1rem 0.15rem"};
+    justify-content: flex-start;
   }
 
   @media (max-width: 320px) {
-    padding: 0.5rem 0.05rem 1rem 0.05rem;
-    justify-content: center;
+    padding: ${(props) =>
+      props.$isSocialMedia
+        ? "0.5rem 0.05rem 1rem 0.05rem"
+        : "50px 0.05rem 1rem 0.05rem"};
+    justify-content: flex-start;
   }
 
   /* Extra small screens */
@@ -174,15 +196,34 @@ const WelcomeContainer = styled.div`
 const AvatarContainer = styled.div`
   position: relative;
 
+  top: clamp(12px, 2vw, 32px);
+
   z-index: 2;
 
-  margin-bottom: 0.75rem;
+  margin-bottom: 1.75rem;
 
-  margin-top: 1rem;
+  margin-top: -4rem;
 
   display: flex;
   align-items: center;
   justify-content: center;
+
+  /* Add padding to prevent logo from being cut off */
+  padding: clamp(4px, 1vw, 8px);
+  overflow: visible;
+
+  /* Mobile: significantly reduce spacing */
+  @media (max-width: 768px) {
+    top: 0;
+    margin-top: 2.5rem;
+    margin-bottom: 0.3rem;
+  }
+
+  @media (max-width: 480px) {
+    top: 0;
+    margin-top: 2.5rem;
+    margin-bottom: 0.2rem;
+  }
 
   /* Tablet responsive design */
 
@@ -190,87 +231,93 @@ const AvatarContainer = styled.div`
     margin-bottom: 0.625rem;
 
     margin-top: 0.875rem;
+    padding: clamp(4px, 0.8vw, 7px);
   }
 
   @media (max-width: 900px) {
     margin-bottom: 0.5rem;
 
     margin-top: 0.75rem;
+    padding: clamp(3px, 0.7vw, 6px);
   }
 
   @media (max-width: 768px) {
-    margin-bottom: 0.5rem;
-
-    margin-top: 0.625rem;
+    top: 0;
+    margin-bottom: 0.3rem;
+    margin-top: 2.5rem;
+    padding: clamp(4px, 0.8vw, 6px);
   }
 
   @media (max-width: 640px) {
-    margin-bottom: 0.625rem;
-
-    margin-top: 0.75rem;
-  }
-
-  @media (max-width: 480px) {
-    margin-bottom: 0.5rem;
-
-    margin-top: 0.5rem;
+    top: 0;
+    margin-bottom: 0.25rem;
+    margin-top: 2.5rem;
+    padding: clamp(3px, 0.6vw, 5px);
   }
 
   @media (max-width: 600px) {
-    margin-bottom: 0.625rem;
-
-    margin-top: 0.4rem;
+    top: 0;
+    margin-bottom: 0.2rem;
+    margin-top: 2.5rem;
+    padding: clamp(3px, 0.6vw, 5px);
   }
 
   @media (max-width: 480px) {
-    margin-bottom: 0.5rem;
-
-    margin-top: 0.4rem;
+    top: 0;
+    margin-bottom: 0.2rem;
+    margin-top: 2.5rem;
+    padding: clamp(3px, 0.5vw, 4px);
   }
 
   @media (max-width: 414px) {
-    margin-bottom: 0.4rem;
-
-    margin-top: 0.3rem;
+    top: 0;
+    margin-bottom: 0.15rem;
+    margin-top: 2.5rem;
+    padding: clamp(2px, 0.4vw, 3px);
   }
 
   @media (max-width: 390px) {
-    margin-bottom: 0.35rem;
-
-    margin-top: 0.3rem;
+    top: 0;
+    margin-bottom: 0.15rem;
+    margin-top: 2.5rem;
+    padding: clamp(2px, 0.4vw, 3px);
   }
 
   @media (max-width: 375px) {
-    margin-bottom: 0.3rem;
-
-    margin-top: 0.25rem;
+    top: 0;
+    margin-bottom: 0.1rem;
+    margin-top: 2.5rem;
+    padding: clamp(2px, 0.3vw, 3px);
   }
 
   @media (max-width: 360px) {
-    margin-bottom: 0.25rem;
-
-    margin-top: 0.25rem;
+    top: 0;
+    margin-bottom: 0.1rem;
+    margin-top: 2.5rem;
+    padding: clamp(2px, 0.3vw, 3px);
   }
 
   @media (max-width: 320px) {
-    margin-bottom: 0.5rem;
-
-    margin-top: 0.2rem;
+    top: 0;
+    margin-bottom: 0.1rem;
+    margin-top: 2.5rem;
+    padding: clamp(2px, 0.3vw, 3px);
   }
 
   /* Extra small screens */
 
   @media (max-width: 280px) {
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.5rem;
 
     margin-top: 0.2rem;
+    padding: clamp(1px, 0.2vw, 2px);
   }
 `;
 
 const AvatarCircle = styled.div`
-  width: 80px;
+  width: 100px;
 
-  height: 80px;
+  height: 100px;
 
   border-radius: 50%;
 
@@ -281,13 +328,12 @@ const AvatarCircle = styled.div`
 
   justify-content: center;
 
-  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 2px solid ${props => props.$isDarkMode ? '#404040' : '#e5e7eb'};
 
   position: relative;
 
   margin-bottom: 1rem;
-
-  animation: float 3s ease-in-out infinite;
 
   &::before {
     content: "";
@@ -306,8 +352,6 @@ const AvatarCircle = styled.div`
 
     // background: linear-gradient(135deg, #8b5cf6, #ec4899, #f59e0b);
     z-index: -1;
-
-    animation: rotate 3s linear infinite;
   }
 
   /* Reduce border thickness on smaller screens */
@@ -377,17 +421,17 @@ const AvatarCircle = styled.div`
   /* Tablet responsive design */
 
   @media (max-width: 1024px) {
-    width: 75px;
+    width: 95px;
 
-    height: 75px;
+    height: 95px;
 
     margin-bottom: 0.875rem;
   }
 
   @media (max-width: 900px) {
-    width: 70px;
+    width: 90px;
 
-    height: 70px;
+    height: 90px;
 
     margin-bottom: 0.75rem;
   }
@@ -480,11 +524,13 @@ const AvatarCircle = styled.div`
 `;
 
 const AvatarImage = styled.img`
-  width: 55px;
+  width: 90px;
 
-  height: 55px;
+  height: 90px;
 
-  object-fit: cover;
+  object-fit: contain;
+  padding: 0;
+  background: transparent;
 
   border-radius: 0%;
   z-index: 1;
@@ -492,21 +538,21 @@ const AvatarImage = styled.img`
   /* Tablet responsive design */
 
   @media (max-width: 1024px) {
-    width: 50px;
+    width: 85px;
 
-    height: 50px;
+    height: 85px;
   }
 
   @media (max-width: 900px) {
-    width: 48px;
+    width: 80px;
 
-    height: 48px;
+    height: 80px;
   }
 
   @media (max-width: 768px) {
-    width: 60px;
+    width: 75px;
 
-    height: 60px;
+    height: 75px;
   }
 
   @media (max-width: 640px) {
@@ -646,8 +692,10 @@ const OnlineIndicator = styled.div`
 `;
 
 const GreetingText = styled.h1`
-  font-size: 2rem !important;
-  font-weight: 500 !important;
+  font-family: "Libre Baskerville", serif;
+  font-size: 30px !important;
+  font-weight: 400 !important;
+  line-height: 45px !important;
   color: ${(props) => (props.$isDarkMode ? "#ffffff" : "#1f2937")};
 
   margin: 0.5rem 0 1rem 0;
@@ -664,27 +712,74 @@ const GreetingText = styled.h1`
 
   overflow-wrap: break-word;
 
-  line-height: 1.2;
+  width: 100%;
+  max-width: 850px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 1rem;
+
+  @media (max-width: 1200px) {
+    max-width: 750px;
+  }
+
+  @media (max-width: 1024px) {
+    max-width: 680px;
+  }
+
+  @media (max-width: 900px) {
+    max-width: 600px;
+  }
 
   @media (max-width: 768px) {
-    font-size: 1.5rem !important;
+    font-size: 26px !important;
+    line-height: 39px !important;
+    margin: 0.2rem 0 0.5rem 0;
+    max-width: 520px;
+    padding: 0 0.75rem;
+  }
 
-    margin: 0.375rem 0 1rem 0;
+  @media (max-width: 640px) {
+    max-width: 480px;
+  }
+
+  @media (max-width: 600px) {
+    max-width: 440px;
   }
 
   @media (max-width: 480px) {
-    font-size: 1.5rem !important;
-    margin: 1.25rem 0 0.75rem 0;
+    font-size: 22px !important;
+    line-height: 33px !important;
+    margin: 0.1rem 0 0.4rem 0;
+    max-width: 400px;
+    padding: 0 0.5rem;
+  }
+
+  @media (max-width: 414px) {
+    max-width: 340px;
+  }
+
+  @media (max-width: 390px) {
+    max-width: 320px;
   }
 
   @media (max-width: 375px) {
-    font-size: 1.5rem !important;
+    font-size: 20px !important;
+    line-height: 30px !important;
     margin: 1.25rem 0 0.75rem 0;
+    max-width: 300px;
+    padding: 0 0.4rem;
+  }
+
+  @media (max-width: 360px) {
+    max-width: 285px;
   }
 
   @media (max-width: 320px) {
-    font-size: 1.8rem !important;
+    font-size: 18px !important;
+    line-height: 27px !important;
     margin: 0 0 1rem 0;
+    max-width: 250px;
+    padding: 0 0.3rem;
   }
 `;
 
@@ -706,6 +801,11 @@ const SubText = styled.p`
   word-wrap: break-word;
 
   overflow-wrap: break-word;
+
+  /* Force visibility */
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 
   @media (max-width: 768px) {
     font-size: 1rem;
@@ -1474,16 +1574,39 @@ const WelcomeSection = ({
   showInlineAuth = false,
   shouldShowAuth = false,
   isAuthenticated = false,
+  // Custom UI props (from admin dashboard)
+  customAvatarUrl = null,
+  customWelcomeText = null,
+  uiConfigLoading = false,
+  // Sound props
+  soundEnabled = true,
+  toggleSound,
+  // Input placeholder props
+  inputPlaceholdersEnabled = false,
+  inputPlaceholders = ["Ask me anything...", "How can I help you?", "What would you like to know?"],
+  inputPlaceholderSpeed = 2.5,
+  inputPlaceholderAnimation = "fade",
 }) => {
   const { isDarkMode } = useTheme();
+
+  // Debug: Log custom UI props
+  React.useEffect(() => {
+    console.log('[WelcomeSection] Custom UI props received:', {
+      customAvatarUrl,
+      customWelcomeText,
+      hasAvatar: !!customAvatarUrl,
+      hasText: !!customWelcomeText,
+      uiConfigLoading
+    });
+  }, [customAvatarUrl, customWelcomeText, uiConfigLoading]);
 
   // Handle direct window open
   const handleFeedClick = (platform) => {
     const urls = {
-      instagram: "https://www.instagram.com/troikatechindia/",
-      youtube: "https://www.youtube.com/@TroikaDombivali",
-      facebook: "https://www.facebook.com/troikatechservices",
-      twitter: "https://x.com/TroikaTechAI",
+      instagram: "https://www.instagram.com/deekshavedantu_/",
+      youtube: "https://www.youtube.com/@deekshakarnataka",
+      facebook: "https://www.facebook.com/DeekshaVedantu/",
+      twitter: "https://x.com/deekshanetwork",
     };
 
     // Open in new tab
@@ -2157,14 +2280,18 @@ const WelcomeSection = ({
         $isDarkMode={isDarkMode}
         $isSocialMedia={activePage === "social-media"}
       >
-        {activePage !== "social-media" && (
+        <BackgroundPattern $isDarkMode={isDarkMode} />
+        {activePage !== "social-media" && !uiConfigLoading && (
           <AvatarContainer>
-            <AvatarCircle>
+            <AvatarCircle $isDarkMode={isDarkMode}>
               <AvatarImage
-                src="/logo.png"
-                alt="Supa Agent Logo"
+                src={customAvatarUrl || "/plastiworldlogo.png"}
+                alt="Chatbot Avatar"
                 onError={(e) => {
-                  e.target.src = "/logo.png";
+                  // Fallback to default if custom image fails to load
+                  if (customAvatarUrl && e.target.src !== "/plastiworldlogo.png") {
+                    e.target.src = "/plastiworldlogo.png";
+                  }
                 }}
               />
 
@@ -2173,54 +2300,70 @@ const WelcomeSection = ({
           </AvatarContainer>
         )}
 
-        {activePage !== "social-media" && (
+        {activePage !== "social-media" && !uiConfigLoading && (
           <>
-            <GreetingText $isDarkMode={isDarkMode}>
-              {activePage === "who-is-troika"
-                ? "Explore Troika Tech AI"
-                : activePage === "what-is-ai-agent"
-                ? "Understanding AI Agents"
-                : activePage === "how-it-works"
-                ? "How AI Agents Work"
-                : activePage === "use-case-for-me"
-                ? "AI Agent Use Cases"
-                : activePage === "pricing-setup"
-                ? "Troika Tech Setup & Pricing"
-                : activePage === "ai-websites"
-                ? "Troika Tech – AI Websites"
-                : activePage === "ai-calling"
-                ? "Troika Tech – AI Calling Agent"
-                : activePage === "ai-agent"
-                ? "Hi, I'm Your WhatsApp Marketing Assistant! 👋"
-                : activePage === "industry-use-cases"
-                ? "AI Websites By Troika Tech"
-                : "Hi, I'm Your WhatsApp Marketing Assistant! 👋"}
-            </GreetingText>
-            <SubText
-              $isDarkMode={isDarkMode}
-              style={{
-                fontSize: "1.1rem",
-                lineHeight: "1.7",
-                maxWidth: "700px",
-                margin: "0 auto",
-                fontWeight: "400",
-                padding: "0 1rem",
-              }}
-            >
-              {activePage === "new-chat"
-                ? "Welcome to Troika Tech! We specialize in creating intelligent AI solutions that transform how businesses interact with their customers. Our comprehensive suite includes AI-powered websites and automated calling agents - all designed to help your business grow 24/7."
-                : activePage === "ai-agent"
-                ? "A 24×7 digital employee that chats, calls, and messages like a real team member to automate your business."
-                : activePage === "ai-calling-agent"
-                ? "A human-like voice AI that makes and answers calls to engage, follow up, and close leads automatically."
-                : activePage === "ai-websites"
-                ? ""
-                : activePage === "ai-calling"
-                ? "A human-like voice AI that makes and answers calls to engage, follow up, and close leads automatically."
-                : activePage === "industry-use-cases"
-                ? ""
-                : ""}
-            </SubText>
+<GreetingText $isDarkMode={isDarkMode}>
+  {customWelcomeText
+    ? customWelcomeText
+    : activePage === "who-is-clearperceptions"
+    ? "Explore Raymond Realty"
+    : activePage === "what-is-testprep"
+    ? "Understanding SAT, GRE & GMAT Prep"
+    : activePage === "how-it-works"
+    ? "How Our Coaching Works"
+    : activePage === "use-case-for-me"
+    ? "Which Test Should You Choose?"
+    : activePage === "pricing-setup"
+    ? "Programs, Packages & Fees"
+    : activePage === "sat-coaching"
+    ? "SAT Coaching by Raymond Realty"
+    : activePage === "gmat-coaching"
+    ? "GMAT Coaching by Raymond Realty"
+    : activePage === "gre-coaching"
+    ? "GRE Coaching by Raymond Realty"
+    : activePage === "counselling"
+    ? "Global Admissions Counselling"
+    : activePage === "success-stories"
+    ? "Student Success Stories"
+    : activePage === "project-information"
+    ? "Project Information"
+    : activePage === "pricing-payment"
+    ? "Pricing & Payment"
+    : activePage === "location-connectivity"
+    ? "Location & Connectivity"
+    : activePage === "new-chat"
+    ? "Here I am Ai Assistant"
+    : "Here I am Ai Assistant"}
+</GreetingText>
+
+<SubText
+  $isDarkMode={isDarkMode}
+  style={{
+    fontSize: "1.1rem",
+    lineHeight: "1.7",
+    maxWidth: "700px",
+    margin: "0 auto",
+    fontWeight: "400",
+    padding: "0 1rem",
+  }}
+>
+  {activePage === "new-chat"
+    ? ""
+    : activePage === "project-information"
+    ? "Review unit mix, possession timelines, amenity highlights, and RERA compliance in one glance."
+    : activePage === "pricing-payment"
+    ? "Track starting prices, payment milestones, seasonal offers, and compulsory add-ons with ease."
+    : activePage === "location-connectivity"
+    ? "See proximity to key hubs, daily conveniences, transit links, and future neighborhood upgrades."
+    : activePage === "ai-websites"
+    ? ""
+    : activePage === "ai-calling"
+    ? "A voice assistant that helps students with class reminders, exam timelines, counselling updates, and essential academic information over quick automated calls."
+    : activePage === "industry-use-cases"
+    ? ""
+    : ""}
+</SubText>
+
 
             {/* Input Area - integrated into welcome section */}
             <InputArea
@@ -2246,6 +2389,12 @@ const WelcomeSection = ({
               shouldShowAuth={shouldShowAuth}
               isAuthenticated={isAuthenticated}
               activePage={activePage}
+              soundEnabled={soundEnabled}
+              toggleSound={toggleSound}
+              inputPlaceholdersEnabled={inputPlaceholdersEnabled}
+              inputPlaceholders={inputPlaceholders}
+              inputPlaceholderSpeed={inputPlaceholderSpeed}
+              inputPlaceholderAnimation={inputPlaceholderAnimation}
             />
 
             {/* AI WhatsApp description removed */}
@@ -2296,7 +2445,7 @@ const WelcomeSection = ({
                 }}
               >
                 <iframe
-                  src="https://www.instagram.com/troikatechindia/embed/"
+                  src="https://www.instagram.com/deekshavedantu_/embed/"
                   width="100%"
                   height="100%"
                   frameBorder="0"
@@ -2356,7 +2505,7 @@ const WelcomeSection = ({
                 }}
               >
                 <iframe
-                  src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Ftroikatechservices&tabs=timeline&width=350&height=400&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false&appId"
+                  src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2FDeekshaVedantu%2F&tabs=timeline&width=350&height=400&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false&appId"
                   width="100%"
                   height="100%"
                   style={{
@@ -2448,7 +2597,7 @@ const WelcomeSection = ({
                   <button
                     onClick={() =>
                       window.open(
-                        "https://www.youtube.com/@TroikaDombivali/videos",
+                        "https://www.youtube.com/@deekshakarnataka/videos",
                         "_blank"
                       )
                     }
@@ -2546,7 +2695,7 @@ const WelcomeSection = ({
                   </p>
                   <button
                     onClick={() =>
-                      window.open("https://x.com/TroikaTechAI", "_blank")
+                      window.open("https://x.com/deekshanetwork", "_blank")
                     }
                     style={{
                       background: "#1da1f2",
@@ -2782,7 +2931,7 @@ const WelcomeSection = ({
                   }}
                 >
                   <iframe
-                    src="https://www.youtube.com/embed?listType=user_uploads&list=@TroikaDombivali&autoplay=0&mute=0&controls=1&showinfo=0&rel=0"
+                    src="https://www.youtube.com/embed?listType=user_uploads&list=@deekshakarnataka&autoplay=0&mute=0&controls=1&showinfo=0&rel=0"
                     width="100%"
                     height="400"
                     frameBorder="0"
@@ -2808,7 +2957,7 @@ const WelcomeSection = ({
                   }}
                 >
                   <iframe
-                    src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Ftroikatechservices&tabs=timeline&width=500&height=400&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
+                    src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2FDeekshaVedantu%2F&tabs=timeline&width=500&height=400&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true&appId"
                     width="100%"
                     height="400"
                     style={{
@@ -2835,7 +2984,7 @@ const WelcomeSection = ({
                   }}
                 >
                   <iframe
-                    src="https://syndication.twitter.com/i/timeline/profile?screen_name=troikatech_in&theme=dark"
+                    src="https://syndication.twitter.com/i/timeline/profile?screen_name=deekshanetwork&theme=dark"
                     width="100%"
                     height="400"
                     frameBorder="0"

@@ -2,21 +2,27 @@ import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { IoVolumeHigh, IoVolumeMute } from "react-icons/io5";
 import { FiZap, FiUsers, FiSettings, FiArrowLeft, FiMenu, FiRefreshCw } from "react-icons/fi";
+import { FaBars, FaTimes } from "react-icons/fa";
 import { useTheme } from "../contexts/ThemeContext";
+import ProfileDropdown from "./ProfileDropdown";
 
 const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
+  padding: clamp(0.5rem, 1.5vw, 1rem) clamp(0.75rem, 2vw, 1.5rem);
   border-bottom: 1px solid ${props => props.$isDarkMode ? '#1f1f1f' : '#e5e5e5'};
   background: ${props => props.$isDarkMode ? '#000000' : '#ffffff'};
   flex-shrink: 0;
   border-radius: 0;
   position: relative;
-  min-height: 60px;
+  min-height: clamp(55px, 4vw, 60px);
   width: 100%;
+  max-width: 100vw;
   transition: background 0.3s ease;
+  
+  /* Prevent horizontal scroll */
+  overflow-x: hidden;
   
   /* Add left padding to accommodate back button */
   @media (min-width: 901px) {
@@ -39,61 +45,32 @@ const Header = styled.div`
     }
   }
 
-  /* Tablet responsive design */
+  /* Responsive design with fluid units */
   @media (max-width: 1024px) {
-    padding: 1.25rem 1.5rem;
-    min-height: 75px;
-  }
-
-  @media (max-width: 900px) {
-    padding: 1rem 1.25rem;
-    min-height: 70px;
+    padding: clamp(0.75rem, 1.5vw, 1.25rem) clamp(1rem, 2vw, 1.5rem);
+    min-height: clamp(60px, 5vw, 70px);
   }
 
   @media (max-width: 768px) {
-    padding: 0.75rem 1rem;
-    min-height: 65px;
+    padding: clamp(0.5rem, 1.25vw, 0.75rem) clamp(0.75rem, 1.5vw, 1rem);
+    min-height: clamp(55px, 4vw, 60px);
     justify-content: space-between;
   }
 
-  @media (max-width: 640px) {
-    padding: 0.75rem 0.875rem;
-    min-height: 65px;
-  }
-
-  @media (max-width: 600px) {
-    padding: 0.625rem 0.75rem;
-    min-height: 62px;
-  }
-
   @media (max-width: 480px) {
-    padding: 0.5rem 0.625rem;
-    min-height: 60px;
-  }
-
-  @media (max-width: 414px) {
-    padding: 0.5rem 0.5rem;
-    min-height: 58px;
-  }
-
-  @media (max-width: 390px) {
-    padding: 0.5rem 0.4rem;
-    min-height: 56px;
-  }
-
-  @media (max-width: 375px) {
-    padding: 0.5rem 0.35rem;
-    min-height: 55px;
+    padding: clamp(0.4rem, 1vw, 0.5rem) clamp(0.5rem, 1.25vw, 0.625rem);
+    min-height: clamp(50px, 3.5vw, 55px);
   }
 
   @media (max-width: 360px) {
-    padding: 0.5rem 0.3rem;
-    min-height: 54px;
+    padding: clamp(0.35rem, 0.75vw, 0.4rem) clamp(0.4rem, 1vw, 0.5rem);
+    min-height: clamp(48px, 3vw, 52px);
   }
-
-  @media (max-width: 320px) {
-    padding: 0.5rem 0.25rem;
-    min-height: 52px;
+  
+  /* Landscape mode */
+  @media (orientation: landscape) and (max-height: 500px) {
+    min-height: clamp(50px, 4vh, 55px);
+    padding: clamp(0.4rem, 1vh, 0.5rem) clamp(0.5rem, 1.5vw, 0.75rem);
   }
 `;
 
@@ -230,9 +207,53 @@ const HeaderLeft = styled.div`
 
 /* Generic circle wrapper so avatar, bot name and status can each sit in a circle */
 const Circle = styled.div`
-  width: ${(props) => props.$size || 63}px; /* Increased by additional 15% from 55px */
-  height: ${(props) => props.$size || 63}px; /* Increased by additional 15% from 55px */
+  width: ${(props) => props.$size || 78}px;
+  height: ${(props) => props.$size || 78}px;
   border-radius: 50%;
+  background: transparent;
+  backdrop-filter: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: none;
+  padding: 0;
+  text-align: center;
+  flex-shrink: 0;
+  overflow: hidden;
+
+  /* Desktop-specific logo size increase by 10% */
+  @media (min-width: 1201px) {
+    width: ${(props) => props.$size ? (props.$size * 1.05) : 82}px;
+    height: ${(props) => props.$size ? (props.$size * 1.05) : 82}px;
+  }
+
+  @media (max-width: 768px) {
+    width: ${(props) => Math.max(70, (props.$size || 78) * 0.95)}px;
+    height: ${(props) => Math.max(70, (props.$size || 78) * 0.95)}px;
+  }
+
+  @media (max-width: 480px) {
+    width: ${(props) => Math.max(65, (props.$size || 78) * 0.88)}px;
+    height: ${(props) => Math.max(65, (props.$size || 78) * 0.88)}px;
+  }
+
+  @media (max-width: 375px) {
+    width: ${(props) => Math.max(60, (props.$size || 78) * 0.8)}px;
+    height: ${(props) => Math.max(60, (props.$size || 78) * 0.8)}px;
+  }
+
+  @media (max-width: 320px) {
+    width: ${(props) => Math.max(54, (props.$size || 78) * 0.72)}px;
+    height: ${(props) => Math.max(54, (props.$size || 78) * 0.72)}px;
+  }
+`;
+
+/* Rectangle wrapper for logo to show full logo properly */
+const LogoContainer = styled.div`
+  width: ${(props) => props.$width || 120}px;
+  height: ${(props) => props.$height || 65}px;
+  border-radius: 8px;
   background: transparent;
   backdrop-filter: none;
   display: flex;
@@ -240,72 +261,49 @@ const Circle = styled.div`
   justify-content: center;
   box-shadow: none;
   border: none;
-  padding: 0;
+  padding: 4px;
   text-align: center;
   flex-shrink: 0;
 
-  /* Desktop-specific logo size increase by 10% */
+  /* Desktop-specific logo size */
   @media (min-width: 1201px) {
-    width: ${(props) => props.$size ? (props.$size * 1.1) : 69}px; /* Increased by 10% for desktop */
-    height: ${(props) => props.$size ? (props.$size * 1.1) : 69}px; /* Increased by 10% for desktop */
-  }
-
-  /* Enhanced mobile responsiveness - Better proportions */
-  @media (max-width: 1024px) {
-    width: ${(props) => Math.max(69, (props.$size || 63) * 1.1)}px;
-    height: ${(props) => Math.max(69, (props.$size || 63) * 1.1)}px;
+    width: ${(props) => props.$width ? (props.$width * 1.05) : 126}px;
+    height: ${(props) => props.$height ? (props.$height * 1.05) : 68}px;
   }
 
   @media (max-width: 768px) {
-    width: ${(props) => Math.max(67, (props.$size || 63) * 1.05)}px;
-    height: ${(props) => Math.max(67, (props.$size || 63) * 1.05)}px;
-  }
-
-  @media (max-width: 640px) {
-    width: ${(props) => Math.max(64, (props.$size || 63) * 1.02)}px;
-    height: ${(props) => Math.max(64, (props.$size || 63) * 1.02)}px;
-  }
-
-  @media (max-width: 600px) {
-    width: ${(props) => Math.max(62, (props.$size || 63) * 0.98)}px;
-    height: ${(props) => Math.max(62, (props.$size || 63) * 0.98)}px;
+    width: ${(props) => Math.max(100, (props.$width || 120) * 0.9)}px;
+    height: ${(props) => Math.max(54, (props.$height || 65) * 0.9)}px;
   }
 
   @media (max-width: 480px) {
-    width: ${(props) => Math.max(60, (props.$size || 63) * 0.93)}px;
-    height: ${(props) => Math.max(60, (props.$size || 63) * 0.93)}px;
-  }
-
-  @media (max-width: 414px) {
-    width: ${(props) => Math.max(58, (props.$size || 63) * 0.89)}px;
-    height: ${(props) => Math.max(58, (props.$size || 63) * 0.89)}px;
-  }
-
-  @media (max-width: 390px) {
-    width: ${(props) => Math.max(55, (props.$size || 63) * 0.84)}px;
-    height: ${(props) => Math.max(55, (props.$size || 63) * 0.84)}px;
+    width: ${(props) => Math.max(90, (props.$width || 120) * 0.85)}px;
+    height: ${(props) => Math.max(49, (props.$height || 65) * 0.85)}px;
   }
 
   @media (max-width: 375px) {
-    width: ${(props) => Math.max(53, (props.$size || 63) * 0.8)}px;
-    height: ${(props) => Math.max(53, (props.$size || 63) * 0.8)}px;
-  }
-
-  @media (max-width: 360px) {
-    width: ${(props) => Math.max(51, (props.$size || 63) * 0.76)}px;
-    height: ${(props) => Math.max(51, (props.$size || 63) * 0.76)}px;
+    width: ${(props) => Math.max(80, (props.$width || 120) * 0.75)}px;
+    height: ${(props) => Math.max(43, (props.$height || 65) * 0.75)}px;
   }
 
   @media (max-width: 320px) {
-    width: ${(props) => Math.max(48, (props.$size || 63) * 0.71)}px;
-    height: ${(props) => Math.max(48, (props.$size || 63) * 0.71)}px;
+    width: ${(props) => Math.max(70, (props.$width || 120) * 0.65)}px;
+    height: ${(props) => Math.max(38, (props.$height || 65) * 0.65)}px;
   }
 `;
 
 const Avatar = styled.img`
-  width: 80%;
-  height: 80%;
+  width: 90%;
+  height: 90%;
   object-fit: cover; /* fill circle exactly */
+  border-radius: 50%;
+  display: block;
+`;
+
+const LogoImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* show full logo without cropping */
   border-radius: 0%;
   display: block;
 `;
@@ -368,94 +366,38 @@ const StatusBlock = styled.div`
 `;
 
 const BotName = styled.div`
-  font-weight: 700;
+  font-family: "Segoe UI", sans-serif;
+  font-weight: 600;
   color: ${props => props.$isDarkMode ? '#ffffff' : '#1f2937'};
-  font-size: 1.4rem;
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
   text-align: left;
   line-height: 1.1;
   margin: 0;
 
-  /* Desktop-specific font size decrease by 15% */
-  @media (min-width: 1201px) {
-    font-size: 1.23rem; /* Decreased by 15% from 1.8rem for desktop */
-  }
-
-  /* Enhanced mobile responsiveness - Better text sizing with improved readability */
-  @media (max-width: 1200px) {
-    font-size: 1.55rem;
-    margin-bottom: 0.2rem;
-    line-height: 0.9;
+  /* Responsive font sizing with clamp */
+  @media (min-width: 1280px) {
+    font-size: clamp(1.2rem, 1.5vw, 1.4rem);
   }
 
   @media (max-width: 1024px) {
-    font-size: 1.8rem; /* Maintained readability on tablets */
-    margin-bottom: 0.2rem;
-    line-height: 1.25;
-  }
-
-  @media (max-width: 900px) {
-    font-size: 1.75rem;
-    margin-bottom: 0.15rem;
-    line-height: 1.22;
+    font-size: clamp(1.3rem, 2vw, 1.6rem);
   }
 
   @media (max-width: 768px) {
-    font-size: 1.7rem; /* Good mobile readability */
-    margin-bottom: 0.15rem;
-    line-height: 1.2;
-  }
-
-  @media (max-width: 640px) {
-    font-size: 1.65rem;
-    margin-bottom: 0.1rem;
-    line-height: 1.18;
-  }
-
-  @media (max-width: 600px) {
-    font-size: 1.6rem;
-    margin-bottom: 0.1rem;
-    line-height: 1.16;
+    font-size: clamp(1.2rem, 2.5vw, 1.5rem);
   }
 
   @media (max-width: 480px) {
-    font-size: 1.65rem; /* Better mobile readability */
-    margin-bottom: 0.05rem;
-    line-height: 1.15;
-  }
-
-  @media (max-width: 414px) {
-    font-size: 1.6rem; /* iPhone readability - increased for better visibility */
-    margin-bottom: 0.05rem;
-    line-height: 1.14;
-  }
-
-  @media (max-width: 390px) {
-    font-size: 1.55rem; /* Small phone optimization - progressive scaling */
-    margin-bottom: 0;
-    line-height: 1.13;
-  }
-
-  @media (max-width: 375px) {
-    font-size: 1.5rem; /* iPhone SE readability - increased for better visibility */
-    margin-bottom: 0;
-    line-height: 1.12;
+    font-size: clamp(1.1rem, 3vw, 1.4rem);
   }
 
   @media (max-width: 360px) {
-    font-size: 1.45rem; /* Very small screens - increased for readability */
-    margin-bottom: 0;
-    line-height: 1.1;
-  }
-
-  @media (max-width: 320px) {
-    font-size: 1.4rem; /* Minimum readable size - increased for better visibility */
-    margin-bottom: 0;
-    line-height: 1.08;
+    font-size: clamp(1rem, 3.5vw, 1.3rem);
   }
 `;
 
 const Status = styled.div`
-  font-size: 0.9rem;
+  font-size: clamp(0.75rem, 1.25vw, 0.9rem);
   color: ${props => props.$isDarkMode ? 'rgba(255, 255, 255, 0.9)' : '#6b7280'};
   text-align: left;
   font-weight: 400;
@@ -463,7 +405,7 @@ const Status = styled.div`
   line-height: 1.2;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: clamp(0.25rem, 0.5vw, 0.35rem);
   /* Removed gradient background for simple appearance */
   /* Removed padding for simple text appearance */
   /* Removed border-radius for simple text appearance */
@@ -476,74 +418,28 @@ const Status = styled.div`
     }
   }
 
-  /* Desktop-specific font size decrease by 15% */
-  @media (min-width: 1201px) {
-    font-size: 0.85rem; /* Decreased by 15% from 1rem for desktop */
-  }
-
-  /* Enhanced mobile responsiveness - Better status sizing with improved readability */
-  @media (max-width: 1200px) {
-    font-size: 0.98rem;
-    line-height: 1.18;
-    gap: 0.3rem;
+  /* Responsive font sizing with clamp */
+  @media (min-width: 1280px) {
+    font-size: clamp(0.8rem, 1vw, 0.9rem);
   }
 
   @media (max-width: 1024px) {
-    font-size: 0.96rem; /* Maintained readability on tablets */
-    line-height: 1.16;
-  }
-
-  @media (max-width: 900px) {
-    font-size: 0.94rem;
-    line-height: 1.15;
+    font-size: clamp(0.85rem, 1.5vw, 0.95rem);
   }
 
   @media (max-width: 768px) {
-    font-size: 0.92rem; /* Good mobile readability */
-    line-height: 1.14;
-    gap: 0.25rem;
-  }
-
-  @media (max-width: 640px) {
-    font-size: 0.9rem;
-    line-height: 1.13;
-  }
-
-  @media (max-width: 600px) {
-    font-size: 0.88rem;
-    line-height: 1.12;
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
+    gap: clamp(0.2rem, 0.5vw, 0.25rem);
   }
 
   @media (max-width: 480px) {
-    font-size: 0.95rem; /* Better mobile readability */
-    line-height: 1.11;
-    gap: 0.2rem;
-  }
-
-  @media (max-width: 414px) {
-    font-size: 0.92rem; /* iPhone readability - increased for better visibility */
-    line-height: 1.1;
-  }
-
-  @media (max-width: 390px) {
-    font-size: 0.9rem; /* Small phone optimization - progressive scaling */
-    line-height: 1.09;
-  }
-
-  @media (max-width: 375px) {
-    font-size: 0.88rem; /* iPhone SE readability - increased for better visibility */
-    line-height: 1.08;
+    font-size: clamp(0.75rem, 2.5vw, 0.85rem);
+    gap: clamp(0.15rem, 0.4vw, 0.2rem);
   }
 
   @media (max-width: 360px) {
-    font-size: 0.86rem; /* Very small screens - increased for readability */
-    line-height: 1.07;
-  }
-
-  @media (max-width: 320px) {
-    font-size: 0.84rem; /* Minimum readable size - increased for better visibility */
-    line-height: 1.06;
-    gap: 0.15rem;
+    font-size: clamp(0.7rem, 3vw, 0.8rem);
+    gap: clamp(0.1rem, 0.3vw, 0.15rem);
   }
 `;
 
@@ -780,15 +676,15 @@ const HeaderButton = styled.button`
   border: none;
   color: ${props => props.$isDarkMode ? '#ffffff' : '#374151'};
   cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 8px;
+  padding: clamp(0.4rem, 1vw, 0.5rem);
+  border-radius: clamp(6px, 1vw, 8px);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  min-width: 36px;
-  min-height: 36px;
-  gap: 0.25rem;
+  min-width: clamp(36px, 3vw, 44px);
+  min-height: clamp(36px, 3vw, 44px);
+  gap: clamp(0.2rem, 0.5vw, 0.25rem);
 
   &:hover {
     background: ${props => props.$isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
@@ -807,42 +703,41 @@ const HeaderButton = styled.button`
   }
 
   svg {
-    font-size: 1.3rem; /* Slightly larger icons */
+    font-size: clamp(1.1rem, 2vw, 1.3rem);
+    width: clamp(1.1rem, 2vw, 1.3rem);
+    height: clamp(1.1rem, 2vw, 1.3rem);
   }
 
   span {
-    font-size: 0.9rem;
+    font-size: clamp(0.75rem, 1.5vw, 0.9rem);
     font-weight: 500;
   }
   
   /* Enhanced mobile responsiveness - Better touch targets */
-  @media (max-width: 1200px) {
-    padding: 0.65rem;
-    min-width: 42px;
-    min-height: 42px;
-    svg { font-size: 1.25rem; }
-  }
-
   @media (max-width: 1024px) {
-    padding: 0.6rem;
-    min-width: 40px;
-    min-height: 40px;
-    svg { font-size: 1.2rem; }
-  }
-
-  @media (max-width: 900px) {
-    padding: 0.55rem;
-    min-width: 38px;
-    min-height: 38px;
-    svg { font-size: 1.15rem; }
+    padding: clamp(0.5rem, 1vw, 0.6rem);
+    min-width: clamp(38px, 3.5vw, 42px);
+    min-height: clamp(38px, 3.5vw, 42px);
+    svg { 
+      font-size: clamp(1rem, 2vw, 1.2rem);
+      width: clamp(1rem, 2vw, 1.2rem);
+      height: clamp(1rem, 2vw, 1.2rem);
+    }
   }
 
   @media (max-width: 768px) {
-    padding: 0.5rem; /* Better mobile touch targets */
-    min-width: 36px;
-    min-height: 36px;
-    svg { font-size: 1.1rem; }
-    span { font-size: 0.85rem; }
+    padding: clamp(0.4rem, 1vw, 0.5rem);
+    min-width: clamp(36px, 3vw, 40px);
+    min-height: clamp(36px, 3vw, 40px);
+    svg { 
+      font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+      width: clamp(0.95rem, 2.5vw, 1.1rem);
+      height: clamp(0.95rem, 2.5vw, 1.1rem);
+    }
+    span { 
+      font-size: clamp(0.7rem, 1.5vw, 0.85rem);
+      display: none; /* Hide text on mobile, keep icons only */
+    }
 
     /* Hide text on mobile, keep icons only */
     &.hide-text-mobile span {
@@ -850,68 +745,35 @@ const HeaderButton = styled.button`
     }
   }
 
-  @media (max-width: 640px) {
-    padding: 0.45rem;
-    min-width: 34px;
-    min-height: 34px;
-    svg { font-size: 1.05rem; }
-    span { font-size: 0.8rem; }
-  }
-
-  @media (max-width: 600px) {
-    padding: 0.4rem;
-    min-width: 32px;
-    min-height: 32px;
-    svg { font-size: 1rem; }
-    span { font-size: 0.75rem; }
-  }
-
   @media (max-width: 480px) {
-    padding: 0.35rem; /* Better mobile spacing */
-    min-width: 30px;
-    min-height: 30px;
-    svg { font-size: 0.95rem; }
-    span { font-size: 0.7rem; }
-  }
-
-  @media (max-width: 414px) {
-    padding: 0.3rem; /* iPhone readability */
-    min-width: 28px;
-    min-height: 28px;
-    svg { font-size: 0.9rem; }
-    span { display: none; }
-  }
-
-  @media (max-width: 390px) {
-    padding: 0.25rem; /* Small phone optimization */
-    min-width: 26px;
-    min-height: 26px;
-    svg { font-size: 0.85rem; }
-    span { display: none; }
-  }
-
-  @media (max-width: 375px) {
-    padding: 0.2rem; /* iPhone SE readability */
-    min-width: 24px;
-    min-height: 24px;
-    svg { font-size: 0.8rem; }
+    padding: clamp(0.35rem, 0.8vw, 0.4rem);
+    min-width: clamp(34px, 2.5vw, 38px);
+    min-height: clamp(34px, 2.5vw, 38px);
+    svg { 
+      font-size: clamp(0.9rem, 2.5vw, 1rem);
+      width: clamp(0.9rem, 2.5vw, 1rem);
+      height: clamp(0.9rem, 2.5vw, 1rem);
+    }
     span { display: none; }
   }
 
   @media (max-width: 360px) {
-    padding: 0.15rem; /* Very small screens */
-    min-width: 22px;
-    min-height: 22px;
-    svg { font-size: 0.75rem; }
+    padding: clamp(0.3rem, 0.6vw, 0.35rem);
+    min-width: clamp(32px, 2vw, 36px);
+    min-height: clamp(32px, 2vw, 36px);
+    svg { 
+      font-size: clamp(0.85rem, 2vw, 0.95rem);
+      width: clamp(0.85rem, 2vw, 0.95rem);
+      height: clamp(0.85rem, 2vw, 0.95rem);
+    }
     span { display: none; }
   }
-
-  @media (max-width: 320px) {
-    padding: 0.1rem; /* Minimum spacing */
-    min-width: 20px;
-    min-height: 20px;
-    svg { font-size: 0.7rem; }
-    span { display: none; }
+  
+  /* Landscape mode */
+  @media (orientation: landscape) and (max-height: 500px) {
+    min-width: clamp(32px, 3vh, 36px);
+    min-height: clamp(32px, 3vh, 36px);
+    padding: clamp(0.3rem, 0.8vh, 0.4rem);
   }
 
   /* Back button specific styling */
@@ -1005,6 +867,9 @@ const ChatHeader = ({
             <FiMenu />
           </HeaderButton>
 
+          {/* Right: Profile Dropdown */}
+          <ProfileDropdown />
+
           {/* Right: Mute Button */}
           {/* <HeaderButton
             $isDarkMode={isDarkMode}
@@ -1019,17 +884,17 @@ const ChatHeader = ({
         /* Desktop Layout */
         <HeaderInner>
           <HeaderLeft>
-            <Circle $size={50}>
+            <Circle $size={65} $isDarkMode={isDarkMode}>
                 <Avatar
-                  src="/logo.png"
-                  alt="Troika Tech Logo"
+                  src="/plastiworldlogo.png"
+                  alt="Plasticworld Logo"
                   onError={(e) => {
-                    e.target.src = "/logo.png";
+                    e.target.src = "/plastiworldlogo.png";
                   }}
                 />
             </Circle>
             <StatusBlock>
-              <BotName $isDarkMode={isDarkMode}>AI Agent</BotName>
+              {/* <BotName $isDarkMode={isDarkMode}>SP University Pune</BotName> */}
               <Status $isDarkMode={isDarkMode}>
                 <OnlineIndicator />
                 <span>Online</span>
@@ -1046,6 +911,7 @@ const ChatHeader = ({
             >
               {isMuted ? <IoVolumeMute /> : <IoVolumeHigh />}
             </HeaderButton> */}
+            <ProfileDropdown />
           </HeaderRight>
         </HeaderInner>
       )}
