@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { FaVolumeUp, FaStopCircle } from "react-icons/fa";
+import { FiCopy, FiThumbsUp, FiThumbsDown } from "react-icons/fi";
 import { useTheme } from "../contexts/ThemeContext";
 import InlineCalendlyWidget from "./InlineCalendlyWidget";
 import ProductCardsDisplay from "./ProductCardsDisplay";
@@ -387,6 +388,56 @@ const PlayButton = styled.button`
   }
 `;
 
+const ActionButtonsWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  margin-left: 0.5rem;
+`;
+
+const ActionButton = styled.button`
+  cursor: pointer;
+  color: ${props => props.$isDarkMode ? '#9ca3af' : '#9ca3af'};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  outline: none;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  box-shadow: none;
+
+  &:hover {
+    background: ${props => props.$isDarkMode ? 'rgba(156, 163, 175, 0.1)' : 'rgba(156, 163, 175, 0.1)'};
+    color: ${props => props.$isDarkMode ? '#d1d5db' : '#6b7280'};
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: none;
+  }
+
+  &:active {
+    transform: scale(0.95);
+    outline: none;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 1.5;
+  }
+
+  ${props => props.$isActive && `
+    color: ${props.$isDarkMode ? '#8b5cf6' : '#6366f1'};
+  `}
+`;
+
 // Removed AudioWaitingIndicator and ClickToPlayText - no longer needed
 
 const BotHeader = styled.div`
@@ -434,6 +485,45 @@ const Timestamp = styled.span`
   transition: color 0.3s ease;
 `;
 
+const ProductImageContainer = styled.div`
+  margin-top: 1rem;
+  margin-left: 0.5rem;
+  border-radius: 12px;
+  overflow: hidden;
+  background: ${props => props.$isDarkMode ? 'rgba(31, 41, 55, 0.5)' : 'rgba(249, 250, 251, 0.8)'};
+  border: 1px solid ${props => props.$isDarkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(229, 231, 235, 0.8)'};
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  max-width: 400px;
+
+  &:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-2px);
+  }
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+  }
+`;
+
+const ProductImage = styled.img`
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+  background: ${props => props.$isDarkMode ? '#1f2937' : '#f9fafb'};
+`;
+
+const ProductImageLabel = styled.div`
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: ${props => props.$isDarkMode ? '#e5e7eb' : '#374151'};
+  background: ${props => props.$isDarkMode ? 'rgba(55, 65, 81, 0.5)' : 'rgba(255, 255, 255, 0.9)'};
+  border-top: 1px solid ${props => props.$isDarkMode ? 'rgba(75, 85, 99, 0.5)' : 'rgba(229, 231, 235, 0.8)'};
+  text-align: center;
+`;
+
 const MessageBubbleComponent = ({
   message,
   index,
@@ -449,6 +539,8 @@ const MessageBubbleComponent = ({
   assistantAvatarUrl,
 }) => {
   const { isDarkMode } = useTheme();
+  const [feedback, setFeedback] = useState(null); // 'like' or 'dislike'
+  const [copied, setCopied] = useState(false);
 
   // Dipson chatbot ID - only show product images for this specific chatbot
   const DIPSON_CHATBOT_ID = "691ae709971ecb8e8d0efb06";
@@ -659,6 +751,25 @@ const MessageBubbleComponent = ({
           <ProductCardsDisplay cards={message.metadata.product_cards} />
         )}
 
+        {/* Product Image Display - shown for all chatbots with product_image metadata */}
+        {!isUser && message.metadata?.product_image && (
+          <ProductImageContainer $isDarkMode={isDarkMode}>
+            <ProductImage
+              src={message.metadata.product_image.image_url}
+              alt={message.metadata.product_image.product_name}
+              $isDarkMode={isDarkMode}
+              onError={(e) => {
+                console.error('Failed to load product image:', message.metadata.product_image.image_url);
+                e.target.style.display = 'none';
+                e.target.nextElementSibling.style.display = 'none';
+              }}
+            />
+            <ProductImageLabel $isDarkMode={isDarkMode}>
+              {message.metadata.product_image.product_name}
+            </ProductImageLabel>
+          </ProductImageContainer>
+        )}
+
         {/* Audio play button outside bubble */}
         {!isUser && message.audio && (
           <AudioButtonWrapper>
@@ -677,6 +788,47 @@ const MessageBubbleComponent = ({
               )}
             </PlayButton>
           </AudioButtonWrapper>
+        )}
+
+        {/* Action buttons for bot messages */}
+        {!isUser && (
+          <ActionButtonsWrapper>
+            <ActionButton
+              $isDarkMode={isDarkMode}
+              onClick={() => {
+                const textToCopy = typeof message.text === 'string' ? message.text : String(message.text || '');
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }).catch(err => {
+                  console.error('Failed to copy text:', err);
+                });
+              }}
+              title={copied ? "Copied!" : "Copy message"}
+            >
+              <FiCopy />
+            </ActionButton>
+            <ActionButton
+              $isDarkMode={isDarkMode}
+              $isActive={feedback === 'like'}
+              onClick={() => {
+                setFeedback(feedback === 'like' ? null : 'like');
+              }}
+              title="Thumbs up"
+            >
+              <FiThumbsUp />
+            </ActionButton>
+            <ActionButton
+              $isDarkMode={isDarkMode}
+              $isActive={feedback === 'dislike'}
+              onClick={() => {
+                setFeedback(feedback === 'dislike' ? null : 'dislike');
+              }}
+              title="Thumbs down"
+            >
+              <FiThumbsDown />
+            </ActionButton>
+          </ActionButtonsWrapper>
         )}
       </MessageContainer>
     </MessageWrapper>

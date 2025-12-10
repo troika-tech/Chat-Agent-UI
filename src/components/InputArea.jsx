@@ -79,7 +79,7 @@ const InputContainer = styled.div`
 
 const ChatInput = styled.input`
   padding: clamp(1.25rem, 2vw, 1.5rem) clamp(4rem, 10vw, 4.5rem) clamp(1.25rem, 2vw, 1.5rem) clamp(1.5rem, 2.5vw, 2rem);
-  border: 2px solid ${props => props.$isDarkMode ? '#3f3f46' : '#e5e7eb'};
+  border: 2px solid ${props => props.$isDarkMode ? '#3f3f46' : '#dfe3ea'};
   border-radius: clamp(16px, 2.5vw, 20px);
   font-size: clamp(1.125rem, 2vw, 1.25rem);
   width: 100%;
@@ -87,7 +87,7 @@ const ChatInput = styled.input`
   box-sizing: border-box;
   outline: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: #ffffff;
+  background: ${props => props.$isDarkMode ? '#0f0f0f' : '#f5f6f7'};
   color: ${props => props.$isDarkMode ? '#ffffff' : '#1f2937'};
   line-height: clamp(1.4, 0.1vw + 1.3, 1.5);
   font-weight: 400;
@@ -118,7 +118,7 @@ const ChatInput = styled.input`
                 ${props => props.$isDarkMode 
                   ? '0 4px 6px rgba(0, 0, 0, 0.4)' 
                   : '0 4px 6px rgba(0, 0, 0, 0.1)'};
-    background: #ffffff;
+    background: ${props => props.$isDarkMode ? '#0f0f0f' : '#f5f6f7'};
     color: ${props => props.$isDarkMode ? '#ffffff' : '#1f2937'};
     transform: translateY(-1px);
   }
@@ -379,7 +379,7 @@ const ActionButton = styled.button`
 const SendButton = styled.button`
   background: #000000;
   border: none;
-  border-radius: clamp(14px, 2.5vw, 18px);
+  border-radius: clamp(10px, 2vw, 12px);
   width: clamp(40px, 4vw, 44px);
   height: clamp(40px, 4vw, 44px);
   min-width: clamp(40px, 4vw, 44px);
@@ -400,6 +400,7 @@ const SendButton = styled.button`
     height: 36px;
     min-width: 36px;
     min-height: 36px;
+    border-radius: 10px;
   }
 
   svg {

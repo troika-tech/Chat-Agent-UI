@@ -127,12 +127,26 @@ import {
   FaChevronDown,
   FaTimes,
 } from "react-icons/fa";
+import {
+  FiFacebook,
+  FiInstagram,
+  FiYoutube,
+  FiLinkedin,
+  FiTwitter,
+  FiMessageCircle,
+  FiSend,
+  FiGlobe,
+  FiMessageSquare,
+  FiPhone,
+  FiCalendar,
+  FiMail,
+} from "react-icons/fi";
 
 const SidebarContainer = styled.div`
-  width: ${props => props.$isCollapsed ? '60px' : 'clamp(240px, 20vw, 260px)'};
+  width: ${props => props.$isCollapsed ? '70px' : 'clamp(280px, 22vw, 320px)'};
   height: 100vh;
   max-height: 100vh;
-  background: ${props => props.$isDarkMode ? '#000000' : '#ebebeb'};
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -144,7 +158,7 @@ const SidebarContainer = styled.div`
   
   /* Responsive width */
   @media (max-width: 1024px) {
-    width: ${props => props.$isCollapsed ? '60px' : 'clamp(280px, 28vw, 300px)'};
+    width: ${props => props.$isCollapsed ? '70px' : 'clamp(300px, 30vw, 340px)'};
   }
 
   /* Hide scrollbar for all browsers */
@@ -172,18 +186,20 @@ const SidebarContainer = styled.div`
   }
 
   .nav-item:hover {
-    background: ${props => props.$isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
-    transform: translateX(2px);
+    background: #f3f4f6;
+    border: none;
+    transform: none;
   }
 
   .nav-item.active {
-    background: ${props => props.$isDarkMode ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)'};
-    border-left: 3px solid #3b82f6;
+    background: #eef2ff;
+    border: none;
+    border-left: 2px solid #4f46e5;
     font-weight: 600;
   }
 
   .nav-item.active .nav-icon {
-    color: #3b82f6;
+    color: #4f46e5;
   }
 
 
@@ -229,7 +245,7 @@ const SidebarContainer = styled.div`
   }
   
   @media (max-width: 480px) {
-    width: min(90vw, 300px);
+    width: min(90vw, 320px);
     max-width: 90vw;
   }
   
@@ -246,8 +262,8 @@ const SidebarContainer = styled.div`
 `;
 
 const SidebarHeader = styled.div`
-  padding: ${props => props.$isCollapsed ? '0.5rem' : '1rem'};
-  border-bottom: ${props => props.$isCollapsed ? 'none' : `1px solid ${props.$isDarkMode ? '#2f2f2f' : '#b0b0b0'}`};
+  padding: ${props => props.$isCollapsed ? '0.75rem' : '1.25rem 1.5rem'};
+  border-bottom: none;
   display: flex;
   align-items: center;
   justify-content: ${props => props.$isCollapsed ? 'center' : 'space-between'};
@@ -296,13 +312,19 @@ const ChevronDown = styled(FaChevronDown)`
 
 const SidebarContent = styled.div`
   flex: 1;
-  padding: 0.25rem 0;
+  padding: 1rem 0;
   display: flex;
   flex-direction: column;
+  gap: clamp(0.75rem, 1vw, 1rem);
 `;
 
 const Section = styled.div`
-  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  gap: clamp(0.625rem, 1vw, 0.75rem);
+  padding: 0 1rem;
 `;
 
 const SectionTitle = styled.div`
@@ -313,55 +335,6 @@ const SectionTitle = styled.div`
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 0.5rem;
-`;
-
-const NavItem = styled.button`
-  width: 100%;
-  padding: ${props => props.$isCollapsed ? '0.4rem' : 'clamp(0.4rem, 1.2vw, 0.5rem) clamp(0.75rem, 2vw, 1rem)'};
-  background: none;
-  border: none;
-  outline: none;
-  color: ${props => props.$isDarkMode ? '#ffffff' : '#000000'};
-  text-align: ${props => props.$isCollapsed ? 'center' : 'left'};
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: ${props => props.$isCollapsed ? 'center' : 'flex-start'};
-  gap: ${props => props.$isCollapsed ? '0' : 'clamp(0.5rem, 1.5vw, 0.75rem)'};
-  font-size: clamp(0.875rem, 1.5vw, 0.9375rem);
-  font-weight: 500;
-  transition: background-color 0.2s ease;
-  border-radius: ${props => props.$isCollapsed ? '8px' : '0'};
-  position: relative;
-  min-height: ${props => props.$isCollapsed ? '36px' : 'clamp(36px, 3.5vw, 40px)'};
-  margin-bottom: 0;
-  
-  /* Touch-friendly on mobile */
-  @media (max-width: 768px) {
-    min-height: 44px;
-    padding: clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 2.5vw, 1.25rem);
-    text-align: left;
-    justify-content: flex-start;
-    gap: clamp(0.5rem, 1.5vw, 0.75rem);
-    border-radius: 0;
-  }
-
-  &:hover {
-    background: ${props => props.$isDarkMode ? '#2a2a2a' : '#f0f0f0'};
-  }
-
-  &:active {
-    background: ${props => props.$isDarkMode ? '#1f1f1f' : '#e5e5e5'};
-    outline: none;
-  }
-
-  &:focus {
-    outline: none;
-  }
-
-  &.active {
-    background: ${props => props.$isDarkMode ? '#2a2a2a' : '#f0f0f0'};
-  }
 `;
 
 const NavIcon = styled.div`
@@ -375,69 +348,153 @@ const NavIcon = styled.div`
   color: #000000;
 `;
 
+const NavItem = styled.button`
+  width: 100%;
+  box-sizing: border-box;
+  padding: ${props => props.$isCollapsed ? '0.4rem' : 'clamp(0.5rem, 1.2vw, 0.625rem) clamp(0.75rem, 2vw, 1rem)'};
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #111827;
+  text-align: ${props => props.$isCollapsed ? 'center' : 'left'};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: ${props => props.$isCollapsed ? 'center' : 'flex-start'};
+  gap: ${props => props.$isCollapsed ? '0' : 'clamp(0.75rem, 1.5vw, 1rem)'};
+  font-size: clamp(0.875rem, 1.5vw, 0.9375rem);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-radius: 16px;
+  position: relative;
+  min-height: ${props => props.$isCollapsed ? '36px' : 'clamp(40px, 3.5vw, 44px)'};
+  margin: 0;
+  white-space: nowrap;
+
+  /* Touch-friendly on mobile */
+  @media (max-width: 768px) {
+    min-height: 44px;
+    padding: clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 2.5vw, 1.25rem);
+    text-align: left;
+    justify-content: flex-start;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+    border-radius: 12px;
+    width: 100%;
+  }
+
+  &:hover {
+    background: #f3f4f6;
+    border: none;
+  }
+
+  &:active {
+    background: #e0e7ff;
+    border: none;
+    border-left: 2px solid #4f46e5;
+    outline: none;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &.active {
+    background: #eef2ff;
+    border: none;
+    color: ${props => props.$isDarkMode ? '#c7d2fe' : '#4f46e5'};
+  }
+
+  &:hover ${NavIcon}, &.active ${NavIcon} {
+    color: #4f46e5;
+  }
+`;
+
 const NavText = styled.span`
   flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
 `;
 
 const SocialIconsContainer = styled.div`
   padding: 1.5rem 1rem;
-  border-top: 1px solid ${props => props.$isDarkMode ? '#2f2f2f' : '#b0b0b0'};
+  border-top: 1px solid #d1d5db;
+  width: 90%;
+  align-self: center;
+  margin-left: auto;
+  margin-right: auto;
   display: flex;
   justify-content: center;
-  gap: clamp(0.02rem, 0.1vw, 0.08rem);
+  gap: 1rem;
   margin-top: auto;
-  
+
   /* Reduced spacing on mobile */
   @media (max-width: 768px) {
-    gap: clamp(0.01rem, 0.08vw, 0.06rem);
+    gap: 0.75rem;
     padding: 1.25rem 0.75rem;
   }
-  
+
   @media (max-width: 480px) {
-    gap: clamp(0.005rem, 0.05vw, 0.04rem);
+    gap: 0.5rem;
     padding: 1rem 0.5rem;
   }
 `;
 
 const SocialIcon = styled.a`
-  width: clamp(36px, 4vw, 44px);
-  height: clamp(36px, 4vw, 44px);
-  min-width: clamp(36px, 4vw, 44px);
-  min-height: clamp(36px, 4vw, 44px);
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: clamp(10px, 1.5vw, 12px);
+  border-radius: 10px;
   background: transparent;
-  color: ${props => props.$defaultColor || (props.$isDarkMode ? '#9ca3af' : '#6b7280')};
-  transition: all 0.3s ease;
+  color: ${props => props.$isDarkMode ? '#9ca3af' : '#6b7280'};
+  border: none;
+  transition: all 0.2s ease;
 
   svg {
-    width: clamp(18px, 2vw, 22px);
-    height: clamp(18px, 2vw, 22px);
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.7;
   }
-  
+
+  /* Force outline look for all platform icons */
+  svg * {
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-width: 2px;
+  }
+
   /* Touch-friendly on mobile */
   @media (max-width: 768px) {
     width: 44px;
     height: 44px;
     min-width: 44px;
     min-height: 44px;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
   }
 
   &:hover {
-    color: ${props => props.$hoverColor || '#8b5cf6'};
-    transform: scale(1.2);
+    background: ${props => props.$isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#f5f6f7'};
+    color: ${props => props.$isDarkMode ? '#f3f4f6' : '#374151'};
+    border-color: ${props => props.$isDarkMode ? '#f3f4f6' : '#4b5563'};
+    transform: translateY(-2px);
   }
 
   &:active {
-    transform: scale(1.1);
+    transform: translateY(0);
   }
 `;
 
 const PoweredByContainer = styled.div`
   padding: 0.75rem 1rem;
-  border-top: 1px solid ${props => props.$isDarkMode ? '#1f1f1f' : '#b0b0b0'};
   margin-top: auto;
   display: flex;
   align-items: center;
@@ -728,8 +785,15 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
   };
 
   const isActive = (path) => {
-    return location.pathname === path;
+    if (!path) return false;
+    if (path === '/') {
+      return location.pathname === '/' || location.pathname === '';
+    }
+    return location.pathname === path ||
+      location.pathname.startsWith(`${path}/`);
   };
+
+  const navClass = (paths = []) => (paths.some(isActive) ? 'nav-item active' : 'nav-item');
 
   // Handle WhatsApp click based on mode
   const handleWhatsAppClick = () => {
@@ -809,19 +873,19 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
   const getPlatformIcon = (platform) => {
     switch (platform) {
       case 'facebook':
-        return <FaFacebook />;
+        return <FiFacebook />;
       case 'instagram':
-        return <FaInstagram />;
+        return <FiInstagram />;
       case 'youtube':
-        return <FaYoutube />;
+        return <FiYoutube />;
       case 'linkedin':
-        return <FaLinkedin />;
+        return <FiLinkedin />;
       case 'twitter':
-        return <FaTwitter />;
+        return <FiTwitter />;
       case 'whatsapp':
-        return <FaWhatsapp />;
+        return <FiMessageCircle />;
       case 'telegram':
-        return <FaTelegram />;
+        return <FiSend />;
       case 'indiamart':
         return <FaStore />;
       case 'justdial':
@@ -829,9 +893,9 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
       case 'tradeindia':
         return <FaShoppingCart />;
       case 'exportersindia':
-        return <FaGlobe />;
+        return <FiGlobe />;
       default:
-        return <FaLink />;
+        return <FiGlobe />;
     }
   };
 
@@ -1159,7 +1223,10 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                       alignItems: 'center',
                       justifyContent: 'center',
                       outline: 'none',
-                      marginLeft: '30px',
+                      position: 'absolute',
+                      top: '50%',
+                      right: 'clamp(12px, 2vw, 16px)',
+                      transform: 'translateY(-50%)',
                       borderRadius: '6px',
                       transition: 'background 0.2s ease',
                       minWidth: '40px',
@@ -1187,10 +1254,10 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
               $isDarkMode={isDarkMode}
               $isCollapsed={isCollapsed && !isMobile}
               onClick={() => handlePageChange('new-chat')}
-              className=""
+              className={navClass(['/', '/new-chat', '/chat', '/home'])}
               title={isCollapsed && !isMobile ? 'New Chat' : ''}
             >
-              <NavIcon><FaMagic /></NavIcon>
+          <NavIcon><FiMessageSquare /></NavIcon>
               {(!isCollapsed || isMobile) && <NavText>New Chat</NavText>}
             </NavItem>
           </Section>
@@ -1215,11 +1282,11 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
                 onClick={handleWhatsAppClick}
-                className="nav-item"
+                className={navClass(['/ai-whatsapp'])}
                 title={isCollapsed && !isMobile ? whatsappText : ''}
               >
                 <NavIcon>
-                  <FaWhatsapp />
+                <FiMessageCircle />
                 </NavIcon>
                 {(!isCollapsed || isMobile) && <NavText>{whatsappText}</NavText>}
               </NavItem>
@@ -1256,11 +1323,11 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
                 onClick={handleCallClick}
-                className="nav-item"
+                className={navClass(['/book-call', '/ai-calling', '/ai-calling-agent'])}
                 title={isCollapsed && !isMobile ? callText : ''}
               >
                 <NavIcon>
-                  <FaPhoneAlt />
+                <FiPhone />
                 </NavIcon>
                 {(!isCollapsed || isMobile) && <NavText>{callText}</NavText>}
               </NavItem>
@@ -1272,11 +1339,11 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
                 onClick={handleCalendlyClick}
-                className="nav-item"
+                className={navClass(['/schedule-meeting'])}
                 title={isCollapsed && !isMobile ? calendlyText : ''}
               >
                 <NavIcon>
-                  <FaCalendarAlt />
+                <FiCalendar />
                 </NavIcon>
                 {(!isCollapsed || isMobile) && <NavText>{calendlyText}</NavText>}
               </NavItem>
@@ -1287,11 +1354,11 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
                 onClick={handleEmailClick}
-                className="nav-item"
+                className={navClass(['/email-services'])}
                 title={isCollapsed && !isMobile ? emailText : ''}
               >
                 <NavIcon>
-                  <FaEnvelope />
+                <FiMail />
                 </NavIcon>
                 {(!isCollapsed || isMobile) && <NavText>{emailText}</NavText>}
               </NavItem>
@@ -1303,7 +1370,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
                 onClick={handleWhatsAppProposalClick}
-                className="nav-item"
+                className={navClass(['/whatsapp-proposals'])}
                 title={isCollapsed && !isMobile ? whatsappProposalText : ''}
               >
                 <NavIcon>
@@ -1320,7 +1387,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
                 onClick={() => handleCustomNavClick(item)}
-                className="nav-item"
+                className={navClass([item.redirect_url || ''])}
                 title={isCollapsed && !isMobile ? item.display_text : ''}
               >
                 <NavIcon>
@@ -1382,7 +1449,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                   src={brandingLogoUrl}
                   alt={brandingCompany}
                   style={{
-                    height: "14px",
+                    height: "20px",
                     width: "auto",
                     filter: isDarkMode ? "brightness(0.8)" : "none"
                   }}

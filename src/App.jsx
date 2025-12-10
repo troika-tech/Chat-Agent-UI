@@ -8,9 +8,9 @@ import { ThemeProvider } from "./contexts/ThemeContext"
 import { AuthProvider } from "./contexts/AuthContext"
 
 // Constants for chatbot configuration
-const CHATBOT_ID = "692949c1b8c1bfbed87e7dff"
-//const API_BASE = "https://chat-api.0804.in/api"
-const API_BASE = "http://localhost:5000/api"
+const CHATBOT_ID = "68fca09724efb81bc041d1be"
+const API_BASE = "https://chat-apiv3.0804.in/api"
+// const API_BASE = "http://localhost:5000/api"
 
 // Development mode - set to true to bypass authentication during development
 // COMMENTED OUT: Using inline authentication after 2 bot messages instead of full-screen auth

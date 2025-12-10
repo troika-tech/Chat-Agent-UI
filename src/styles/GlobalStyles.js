@@ -2,7 +2,7 @@ import { createGlobalStyle } from "styled-components";
 
 const GlobalStyle = createGlobalStyle`
     * {
-      font-family: "Hanken Grotesk", "Amaranth", "Poppins", sans-serif;
+      font-family: "Libre Baskerville", "Hanken Grotesk", "Amaranth", "Poppins", serif !important;
       box-sizing: border-box;
     }
     

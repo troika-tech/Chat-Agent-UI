@@ -4,7 +4,7 @@ html {
 }
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Libre Baskerville", "Hanken Grotesk", "Amaranth", "Poppins", serif !important;
   line-height: 1.5;
   font-weight: 400;
 

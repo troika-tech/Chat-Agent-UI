@@ -9,6 +9,33 @@ import ScheduleMeeting from './components/ScheduleMeeting'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider } from './contexts/AuthContext'
 
+// Load Google Fonts dynamically for embed mode
+// This ensures Libre Baskerville is available when the bundle is embedded in other pages
+if (typeof document !== 'undefined') {
+  // Check if fonts are already loaded to avoid duplicates
+  const existingFontLink = document.querySelector('link[href*="fonts.googleapis.com/css2?family=Libre+Baskerville"]');
+  
+  if (!existingFontLink) {
+    // Preconnect to Google Fonts for faster loading
+    const preconnect1 = document.createElement('link');
+    preconnect1.rel = 'preconnect';
+    preconnect1.href = 'https://fonts.googleapis.com';
+    document.head.appendChild(preconnect1);
+    
+    const preconnect2 = document.createElement('link');
+    preconnect2.rel = 'preconnect';
+    preconnect2.href = 'https://fonts.gstatic.com';
+    preconnect2.crossOrigin = 'anonymous';
+    document.head.appendChild(preconnect2);
+    
+    // Load the font stylesheet
+    const fontLink = document.createElement('link');
+    fontLink.href = 'https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap';
+    fontLink.rel = 'stylesheet';
+    document.head.appendChild(fontLink);
+  }
+}
+
 /**
  * Initialize Troika Chatbot in embed mode
  * This function is called by the loader script after the bundle loads

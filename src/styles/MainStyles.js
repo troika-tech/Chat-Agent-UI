@@ -145,7 +145,7 @@ export const Wrapper = styled.div`
     }
   }
 
-  font-family: "Amaranth", "Poppins", sans-serif;
+  font-family: "Libre Baskerville", "Hanken Grotesk", "Amaranth", "Poppins", serif;
 `;
 
 export const Overlay = styled.div`

@@ -2350,6 +2350,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
             const reader = body.getReader();
             const decoder = new TextDecoder();
             let fullAnswer = '';
+            let productImageData = null; // Track product image from metadata event
 
             // Read the stream
             let isComplete = false;
@@ -2364,6 +2365,11 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                       sender: "bot",
                       text: fullAnswer,
                       timestamp: new Date(),
+                      ...(productImageData && {
+                        metadata: {
+                          product_image: productImageData
+                        }
+                      })
                     };
                     addMessageToTab(currentTab, botMessage);
                     // Play receive sound after a short delay
@@ -2398,7 +2404,13 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                     if (data && data !== '[DONE]') {
                       try {
                         const parsed = JSON.parse(data);
-                        
+
+                        // Check if this is a metadata event with product_image
+                        if (currentEventType === 'metadata' && parsed.product_image) {
+                          console.log('🖼️ Product image metadata received:', parsed.product_image);
+                          productImageData = parsed.product_image;
+                        }
+
                         // Check if this is an error event or error data
                         if (currentEventType === 'error' || parsed.error === 'CREDITS_EXHAUSTED' || parsed.error === 'INSUFFICIENT_CREDITS') {
                           console.log('✅ Credit error detected in manual stream!', parsed);
@@ -2413,7 +2425,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                           isComplete = true;
                           return;
                         }
-                        
+
                         if (parsed.content) {
                           fullAnswer += parsed.content;
                           // Update the manual streaming response for live display
@@ -2445,6 +2457,11 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                       sender: "bot",
                       text: fullAnswer,
                       timestamp: new Date(),
+                      ...(productImageData && {
+                        metadata: {
+                          product_image: productImageData
+                        }
+                      })
                     };
                     addMessageToTab(currentTab, botMessage);
                   }
