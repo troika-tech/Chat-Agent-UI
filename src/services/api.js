@@ -140,6 +140,52 @@ export async function getIntentConfig(apiBase, chatbotId) {
 }
 
 /**
+ * Get handoff intent configuration for a chatbot
+ * @param {string} apiBase - Base API URL
+ * @param {string} chatbotId - Chatbot ID
+ * @returns {Promise<object>} Handoff config
+ */
+export async function getHandoffConfig(apiBase, chatbotId) {
+  try {
+    const response = await fetch(`${apiBase}/handoff/config/${chatbotId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch handoff config');
+    }
+    const data = await response.json();
+    return data.data || data;
+  } catch (error) {
+    console.error('Error fetching handoff config:', error);
+    // Return default config on error
+    return {
+      enabled: false,
+      keywords: [],
+      confirmation_prompt_text: "I can connect you to a human agent. Should I proceed?",
+      success_message: "Okay, connecting you to a human agent now.",
+      toast_message: "Handoff request sent to our team.",
+      positive_responses: ["yes", "ok", "sure", "connect me", "talk to human"],
+      negative_responses: ["no", "not now", "later"],
+      timeout_minutes: 5,
+    };
+  }
+}
+
+/**
+ * Fetch handoff session messages
+ * @param {string} apiBase
+ * @param {string} sessionId
+ * @param {string} chatbotId
+ */
+export async function getHandoffMessages(apiBase, sessionId, chatbotId) {
+  const qs = chatbotId ? `?chatbotId=${encodeURIComponent(chatbotId)}` : '';
+  const response = await fetch(`${apiBase}/handoff/messages/${encodeURIComponent(sessionId)}${qs}`);
+  if (!response.ok) {
+    const errorMessage = await parseErrorResponse(response);
+    throw new Error(errorMessage || 'Failed to fetch handoff messages');
+  }
+  return await response.json();
+}
+
+/**
  * Get transcript configuration for a chatbot
  * @param {string} apiBase - Base API URL
  * @param {string} chatbotId - Chatbot ID
@@ -187,6 +233,39 @@ export async function sendProposal(apiBase, chatbotId, phone, serviceName) {
   if (!response.ok) {
     const errorMessage = await parseErrorResponse(response);
     throw new Error(errorMessage || 'Failed to send proposal');
+  }
+
+  return await response.json();
+}
+
+/**
+ * Request human handoff (create or update handoff session)
+ * @param {string} apiBase - Base API URL
+ * @param {string} chatbotId - Chatbot ID
+ * @param {string} sessionId - Chat session ID
+ * @param {string} phone - User phone (optional if auth disabled)
+ * @param {string} name - User name (optional)
+ * @param {string} message - User's handoff request text
+ * @returns {Promise<object>} Response data
+ */
+export async function requestHandoff(apiBase, chatbotId, sessionId, phone, name, message) {
+  const response = await fetch(`${apiBase}/handoff/request`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      chatbotId,
+      sessionId,
+      phone,
+      name,
+      message,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorMessage = await parseErrorResponse(response);
+    throw new Error(errorMessage || 'Failed to request handoff');
   }
 
   return await response.json();

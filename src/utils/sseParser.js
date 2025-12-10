@@ -135,6 +135,15 @@ export class SSEStreamReader {
             }
             handlers.onText?.(token);
             break;
+          case 'message':
+            // Generic message event (e.g., handoff notifications). Forward if handler exists.
+            if (handlers.onMessage) {
+              handlers.onMessage(event.data);
+            } else if (handlers.onMetadata) {
+              // Fallback: treat as metadata to avoid console noise
+              handlers.onMetadata(event.data);
+            }
+            break;
           case 'audio':
             // Pass audio chunk with sequence number for ordered playback
             // Backend sends: { chunk: "base64...", sequence: 0 }
@@ -168,7 +177,7 @@ export class SSEStreamReader {
             // Close event - log but don't warn
             break;
           default:
-            console.warn('Unknown event type:', event.type, event.data);
+            console.debug('Unknown SSE event type:', event.type, event.data);
         }
       }
     }

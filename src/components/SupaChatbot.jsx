@@ -59,7 +59,7 @@ import { playSendSound, playReceiveSound } from "../utils/soundUtils";
 
 // Import services
 import frontendInactivityManager from "../services/frontendInactivityManager";
-import { getAuthConfig, getIntentConfig, getTranscriptConfig, sendProposal, getZohoConfig, captureLeadToZoho } from "../services/api";
+import { getAuthConfig, getIntentConfig, getHandoffConfig, getHandoffMessages, getTranscriptConfig, sendProposal, requestHandoff, getZohoConfig, captureLeadToZoho } from "../services/api";
 
 const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   const { isDarkMode } = useTheme();
@@ -218,6 +218,24 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   // Proposal confirmation state
   const [proposalConfirmationPending, setProposalConfirmationPending] = useState(false);
   const [proposalQuestionTime, setProposalQuestionTime] = useState(null);
+  // Handoff confirmation state
+  const [handoffConfig, setHandoffConfig] = useState({
+    enabled: false,
+    keywords: [],
+    confirmation_prompt_text: "I can connect you to a human agent. Should I proceed?",
+    success_message: "Okay, connecting you to a human agent now.",
+    toast_message: "Handoff request sent to our team.",
+    positive_responses: ["yes", "ok", "sure", "connect me", "talk to human"],
+    negative_responses: ["no", "not now", "later"],
+    timeout_minutes: 5,
+  });
+  const [handoffConfigLoading, setHandoffConfigLoading] = useState(false);
+  const [handoffConfirmationPending, setHandoffConfirmationPending] = useState(false);
+  const [handoffQuestionTime, setHandoffQuestionTime] = useState(null);
+  const [handoffMessages, setHandoffMessages] = useState([]);
+  const [handoffPolling, setHandoffPolling] = useState(false);
+  // Tracks when a handoff request is actually active; prevents polling regular chats
+  const [handoffActive, setHandoffActive] = useState(false);
 
   // Zoho lead collection state
   const [zohoConfig, setZohoConfig] = useState({
@@ -319,6 +337,76 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       setChatHistory(newHistory);
     }
   }, [loadTabHistory, saveTabHistory, getCurrentTab, ensureMessageTimestamp]);
+
+  // Poll handoff messages when handoff is active
+  useEffect(() => {
+    let poller;
+    const poll = async () => {
+      // Only poll when a handoff is really active, not just when the feature is enabled
+      if (!sessionId || !chatbotId || !handoffConfig.enabled || !handoffActive) return;
+      try {
+        setHandoffPolling(true);
+        const resp = await getHandoffMessages(apiBase, sessionId, chatbotId);
+        const msgs = (resp.messages || [])
+          .map((m) => ({
+            sender: m.sender === 'bot' ? 'agent' : 'user',
+            text: m.content,
+            timestamp: m.timestamp ? new Date(m.timestamp) : new Date(),
+            _id: m.id,
+          }))
+          .filter((m) => m.text && m.text.toString().trim().length > 0); // drop blank messages
+
+        const agentMsgs = msgs.filter((m) => m.sender === 'agent');
+        setHandoffMessages(agentMsgs);
+        const tabId = getCurrentTab();
+        setChatHistory((prev) => {
+          const merged = [...prev].filter(
+            (m) => m.text && m.text.toString().trim().length > 0
+          );
+          const existingIds = new Set();
+          prev.forEach((m) => {
+            if (m._id) existingIds.add(m._id);
+          });
+          agentMsgs.forEach((m) => {
+            if (m._id) {
+              if (!existingIds.has(m._id)) {
+                existingIds.add(m._id);
+                merged.push(m);
+              }
+            } else {
+              merged.push(m);
+            }
+          });
+          // Drop blanks and sort
+          const cleaned = merged.filter(
+            (m) => m.text && m.text.toString().trim().length > 0
+          );
+          cleaned.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+          if (tabId) {
+            saveTabHistory(tabId, cleaned);
+          }
+          return cleaned;
+        });
+      } catch (e) {
+        console.error('[Handoff] Failed to fetch messages:', e);
+      } finally {
+        setHandoffPolling(false);
+      }
+    };
+
+    poll();
+    poller = setInterval(poll, 4000);
+    return () => {
+      if (poller) clearInterval(poller);
+    };
+  }, [apiBase, sessionId, chatbotId, handoffConfig.enabled, handoffActive, getCurrentTab, saveTabHistory]);
+
+  // Reset handoff active flag when session changes or feature is disabled
+  useEffect(() => {
+    if (!handoffConfig.enabled) {
+      setHandoffActive(false);
+    }
+  }, [sessionId, chatbotId, handoffConfig.enabled]);
 
   // Streaming hook with proper options
   const {
@@ -432,86 +520,74 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         }, 500);
       }
 
-      // Intent detection for proposal requests (check user's last message)
-      if (intentConfig.enabled && intentConfig.keywords && intentConfig.keywords.length > 0 && verified && userMessageText) {
-        console.log('🔍 [Intent Detection] Checking for proposal intent:', {
-          enabled: intentConfig.enabled,
-          keywords: intentConfig.keywords,
-          userMessage: userMessageText,
-          verified: verified,
-          pending: proposalConfirmationPending
-        });
-        
-        // Helper function for fuzzy matching (handles typos)
-        const fuzzyMatch = (text, keyword) => {
-          const normalizedText = text.toLowerCase();
-          const normalizedKeyword = keyword.toLowerCase().trim();
-          
-          // Exact substring match
-          if (normalizedText.includes(normalizedKeyword)) {
-            return true;
-          }
-          
-          // Check each word in the message for similarity to keyword
-          const words = normalizedText.split(/\s+/);
-          for (const word of words) {
-            // Skip very short words
-            if (word.length < 3) continue;
-            
-            // Check if word length is similar to keyword (within 3 characters)
-            if (Math.abs(word.length - normalizedKeyword.length) <= 3) {
-              // Check if they share a common prefix (at least 4 characters)
-              const prefixLen = Math.min(4, Math.min(word.length, normalizedKeyword.length));
-              if (word.substring(0, prefixLen) === normalizedKeyword.substring(0, prefixLen)) {
-                // Calculate simple similarity
-                let matches = 0;
-                const minLen = Math.min(word.length, normalizedKeyword.length);
-                for (let i = 0; i < minLen; i++) {
-                  if (word[i] === normalizedKeyword[i]) {
-                    matches++;
-                  }
-                }
-                
-                // If at least 70% of characters match, consider it a match
-                const similarity = matches / Math.max(word.length, normalizedKeyword.length);
-                if (similarity >= 0.7) {
-                  console.log(`✅ Fuzzy match found: "${word}" similar to "${normalizedKeyword}" (similarity: ${(similarity * 100).toFixed(1)}%)`);
-                  return true;
-                }
+      // Helper for fuzzy match (shared by proposal/handoff)
+      const fuzzyMatch = (text, keyword) => {
+        const normalizedText = text.toLowerCase();
+        const normalizedKeyword = keyword.toLowerCase().trim();
+        if (normalizedText.includes(normalizedKeyword)) return true;
+        const words = normalizedText.split(/\s+/);
+        for (const word of words) {
+          if (word.length < 3) continue;
+          if (Math.abs(word.length - normalizedKeyword.length) <= 3) {
+            const prefixLen = Math.min(4, Math.min(word.length, normalizedKeyword.length));
+            if (word.substring(0, prefixLen) === normalizedKeyword.substring(0, prefixLen)) {
+              let matches = 0;
+              const minLen = Math.min(word.length, normalizedKeyword.length);
+              for (let i = 0; i < minLen; i++) {
+                if (word[i] === normalizedKeyword[i]) matches++;
               }
-              
-              // Also check if word contains a significant portion of keyword (handles partial matches)
-              if (word.length >= 5 && normalizedKeyword.length >= 5) {
-                const minMatchLen = Math.min(5, Math.min(word.length, normalizedKeyword.length));
-                if (word.includes(normalizedKeyword.substring(0, minMatchLen)) ||
-                    normalizedKeyword.includes(word.substring(0, minMatchLen))) {
-                  console.log(`✅ Partial match found: "${word}" contains "${normalizedKeyword.substring(0, minMatchLen)}"`);
-                  return true;
-                }
+              const similarity = matches / Math.max(word.length, normalizedKeyword.length);
+              if (similarity >= 0.7) return true;
+            }
+            if (word.length >= 5 && normalizedKeyword.length >= 5) {
+              const minMatchLen = Math.min(5, Math.min(word.length, normalizedKeyword.length));
+              if (word.includes(normalizedKeyword.substring(0, minMatchLen)) ||
+                  normalizedKeyword.includes(word.substring(0, minMatchLen))) {
+                return true;
               }
             }
           }
-          
-          return false;
-        };
-        
-        // Check if user message contains intent keywords (with fuzzy matching)
-        const hasIntentKeyword = intentConfig.keywords.some(keyword => {
-          return fuzzyMatch(userMessageText, keyword);
+        }
+        return false;
+      };
+
+      // Handoff intent detection
+      if (handoffConfig.enabled && handoffConfig.keywords && handoffConfig.keywords.length > 0 && verified && userMessageText) {
+        const hasHandoffKeyword = handoffConfig.keywords.some((keyword) => fuzzyMatch(userMessageText, keyword));
+        if (hasHandoffKeyword && !handoffConfirmationPending) {
+          setHandoffConfirmationPending(true);
+          setHandoffQuestionTime(Date.now());
+          setTimeout(() => {
+            try {
+              const prompt = {
+                sender: "bot",
+                text: handoffConfig.confirmation_prompt_text || "I can connect you to a human agent. Should I proceed?",
+                timestamp: new Date()
+              };
+              setChatHistory((prev) => [...prev, prompt]);
+            } catch (error) {
+              console.error('❌ Error adding handoff confirmation prompt:', error);
+            }
+          }, 500);
+        }
+      } else {
+        console.log('🔍 [Handoff Intent] Skipped:', {
+          enabled: handoffConfig.enabled,
+          hasKeywords: handoffConfig.keywords && handoffConfig.keywords.length > 0,
+          verified,
+          hasUserMessage: !!userMessageText,
+          userMessage: userMessageText
         });
-        
-        console.log('🔍 [Intent Detection] Result:', {
-          hasIntentKeyword,
-          userMessage: userMessageText,
-          keywords: intentConfig.keywords
-        });
+      }
+
+      // Proposal intent detection
+      if (intentConfig.enabled && intentConfig.keywords && intentConfig.keywords.length > 0 && verified && userMessageText) {
+        const hasIntentKeyword = intentConfig.keywords.some(keyword => fuzzyMatch(userMessageText, keyword));
         
         if (hasIntentKeyword && !proposalConfirmationPending) {
-          console.log('🎯 Proposal intent detected in user message:', userMessageText);
           setProposalConfirmationPending(true);
           setProposalQuestionTime(Date.now());
           
-          // Add confirmation prompt directly to avoid closure issues
           setTimeout(() => {
             try {
               const confirmationPrompt = {
@@ -519,28 +595,13 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                 text: intentConfig.confirmation_prompt_text || "Would you like me to send the proposal to your WhatsApp number?",
                 timestamp: new Date()
               };
-              console.log('📤 Adding confirmation prompt to chat:', confirmationPrompt.text);
               
-              // Add confirmation prompt directly - localStorage will sync via useEffect
-              setChatHistory(prev => {
-                const newHistory = [...prev, confirmationPrompt];
-                console.log('✅ Confirmation prompt added successfully');
-                return newHistory;
-              });
+              setChatHistory(prev => [...prev, confirmationPrompt]);
             } catch (error) {
               console.error('❌ Error adding confirmation prompt:', error);
             }
           }, 1000);
         }
-      } else {
-        // Debug why intent detection didn't run
-        console.log('🔍 [Intent Detection] Skipped:', {
-          enabled: intentConfig.enabled,
-          hasKeywords: intentConfig.keywords && intentConfig.keywords.length > 0,
-          verified: verified,
-          hasUserMessage: !!userMessageText,
-          userMessage: userMessageText
-        });
       }
 
       // Zoho lead capture intent detection (check user's last message)
@@ -1531,6 +1592,31 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       }
     };
     fetchIntentConfig();
+  }, [chatbotId, apiBase]);
+
+  // Fetch handoff configuration
+  useEffect(() => {
+    if (!chatbotId || !apiBase) {
+      setHandoffConfigLoading(false);
+      return;
+    }
+    setHandoffConfigLoading(true);
+    const fetchHandoffConfig = async () => {
+      try {
+        console.log(`[Handoff Config] Fetching handoff config for chatbot: ${chatbotId} from ${apiBase}`);
+        const config = await getHandoffConfig(apiBase, chatbotId);
+        setHandoffConfig(config);
+        console.log('[Handoff Config] ✅ Loaded:', config);
+        if (!config.enabled) {
+          console.log('[Handoff Config] ⚠️ Handoff intent is disabled');
+        }
+      } catch (error) {
+        console.error('[Handoff Config] ❌ Error loading config:', error);
+      } finally {
+        setHandoffConfigLoading(false);
+      }
+    };
+    fetchHandoffConfig();
   }, [chatbotId, apiBase]);
 
   // Fetch Zoho configuration
@@ -2903,35 +2989,98 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
           }
         }
 
+        // ===== Handoff confirmation handling =====
+        if (handoffConfirmationPending) {
+          const timeoutMinutes = handoffConfig.timeout_minutes || 5;
+          const timeoutMs = timeoutMinutes * 60 * 1000;
+          if (handoffQuestionTime && (Date.now() - handoffQuestionTime) > timeoutMs) {
+            setHandoffConfirmationPending(false);
+            setHandoffQuestionTime(null);
+          } else {
+            const normalizedResponse = trimmedText.toLowerCase().trim();
+            const positives = handoffConfig.positive_responses || ["yes", "ok", "sure", "connect me", "talk to human"];
+            const negatives = handoffConfig.negative_responses || ["no", "not now", "later"];
+            const isPositive = positives.some((r) => normalizedResponse === r.toLowerCase().trim() || normalizedResponse.includes(r.toLowerCase().trim()));
+            const isNegative = negatives.some((r) => normalizedResponse === r.toLowerCase().trim() || normalizedResponse.includes(r.toLowerCase().trim()));
+
+            if (isPositive) {
+              setMessage("");
+              setHandoffConfirmationPending(false);
+              setHandoffQuestionTime(null);
+
+              const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
+              setChatHistory((prev) => [...prev, userMessage]);
+
+              const verifiedPhone = userInfo?.phone || phone || userPhone;
+              const requesterName = userName || userInfo?.name || null;
+              if (!sessionId) {
+                const errorMessage = {
+                  sender: "bot",
+                  text: "I couldn't start a handoff because the session is missing. Please reload the chat.",
+                  timestamp: new Date()
+                };
+                setChatHistory(prev => [...prev, errorMessage]);
+                isSendingMessageRef.current = false;
+                return;
+              }
+
+              requestHandoff(apiBase, chatbotId, sessionId, verifiedPhone, requesterName, textToSend)
+                .then((result) => {
+                  setHandoffActive(true);
+                  const successMessage = {
+                    sender: "bot",
+                    text: handoffConfig.success_message || "Okay, connecting you to a human agent now.",
+                    timestamp: new Date()
+                  };
+                  setChatHistory(prev => [...prev, successMessage]);
+                  toast.success(handoffConfig.toast_message || "Handoff request sent to our team.");
+                })
+                .catch((error) => {
+                  const errorMessage = {
+                    sender: "bot",
+                    text: `Sorry, I couldn't start a handoff: ${error.message || "An unexpected error occurred."}`,
+                    timestamp: new Date()
+                  };
+                  setChatHistory(prev => [...prev, errorMessage]);
+                  toast.error(error.message || "Failed to start handoff");
+                })
+                .finally(() => {
+                  isSendingMessageRef.current = false;
+                });
+              return;
+            }
+
+            if (isNegative) {
+              setMessage("");
+              setHandoffConfirmationPending(false);
+              setHandoffQuestionTime(null);
+              const declineMessage = {
+                sender: "bot",
+                text: "No problem! Let me know when you're ready.",
+                timestamp: new Date()
+              };
+              setChatHistory(prev => [...prev, declineMessage]);
+              isSendingMessageRef.current = false;
+              return;
+            }
+
+            setHandoffConfirmationPending(false);
+            setHandoffQuestionTime(null);
+          }
+        }
+
         // ===== PROPOSAL CONFIRMATION HANDLING =====
-        // Check if user is responding to proposal confirmation question
         if (proposalConfirmationPending) {
-          console.log('🔍 [Proposal Confirmation] Processing response:', {
-            message: trimmedText,
-            pending: proposalConfirmationPending,
-            questionTime: proposalQuestionTime
-          });
-          
           const timeoutMinutes = intentConfig.timeout_minutes || 5;
           const timeoutMs = timeoutMinutes * 60 * 1000;
-          
-          // Check if confirmation has timed out
           if (proposalQuestionTime && (Date.now() - proposalQuestionTime) > timeoutMs) {
-            console.log('⏰ Proposal confirmation timed out');
             setProposalConfirmationPending(false);
             setProposalQuestionTime(null);
           } else {
-            // Check if response is positive confirmation
             const normalizedResponse = trimmedText.toLowerCase().trim();
             const positiveResponses = intentConfig.positive_responses || ["yes", "yep", "sure", "ok", "send it", "please", "go ahead", "yes please"];
             const negativeResponses = intentConfig.negative_responses || ["no", "not now", "later", "maybe later", "not yet"];
-            
-            console.log('🔍 [Proposal Confirmation] Checking responses:', {
-              normalizedResponse,
-              positiveResponses,
-              negativeResponses
-            });
-            
+
             const isPositive = positiveResponses.some(response => {
               const normalized = response.toLowerCase().trim();
               return normalizedResponse === normalized || normalizedResponse.includes(normalized);
@@ -2940,96 +3089,66 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
               const normalized = response.toLowerCase().trim();
               return normalizedResponse === normalized || normalizedResponse.includes(normalized);
             });
-            
-            console.log('🔍 [Proposal Confirmation] Match result:', {
-              isPositive,
-              isNegative,
-              message: trimmedText
-            });
-            
+
             if (isPositive) {
-              console.log('✅ [Proposal Confirmation] User confirmed - sending proposal');
-              
-              // Clear message input immediately to prevent it from being sent as regular message
               setMessage("");
               setProposalConfirmationPending(false);
               setProposalQuestionTime(null);
-              
-              // Add user message directly - use state update only, localStorage will sync via useEffect
+
               const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
-              
-              // Update state immediately - this is safe and doesn't have closure issues
-              // localStorage will be updated by the existing useEffect that watches chatHistory
               setChatHistory(prev => [...prev, userMessage]);
-              
-              // Get verified phone number
+
               const verifiedPhone = userInfo?.phone || phone || userPhone;
-              console.log('📱 [Proposal] Verified phone:', verifiedPhone);
-              
               if (!verifiedPhone) {
-                console.warn('⚠️ [Proposal] No verified phone number found');
                 const errorMessage = {
                   sender: "bot",
                   text: "I don't have your WhatsApp number. Please verify your phone number first.",
                   timestamp: new Date()
                 };
-                // Use functional update - localStorage will sync via useEffect
                 setChatHistory(prev => [...prev, errorMessage]);
                 isSendingMessageRef.current = false;
                 return;
               }
-              
-              // Send proposal
-              console.log('📤 [Proposal] Sending proposal to:', verifiedPhone);
+
               sendProposal(apiBase, chatbotId, verifiedPhone)
                 .then((result) => {
-                  console.log('✅ [Proposal] Proposal sent successfully:', result);
                   const successMessage = {
                     sender: "bot",
                     text: intentConfig.success_message || "✅ Proposal sent to your WhatsApp number!",
                     timestamp: new Date()
                   };
-                  // Add success message directly - localStorage will sync via useEffect
                   setChatHistory(prev => [...prev, successMessage]);
                   toast.success(intentConfig.toast_message || "Proposal sent successfully! 📱");
                 })
                 .catch((error) => {
-                  console.error('❌ [Proposal] Error sending proposal:', error);
                   const errorMessage = {
                     sender: "bot",
                     text: `Sorry, I couldn't send the proposal: ${error.message || "An unexpected error occurred."}`,
                     timestamp: new Date()
                   };
-                  // Add error message directly - localStorage will sync via useEffect
                   setChatHistory(prev => [...prev, errorMessage]);
                   toast.error("Failed to send proposal");
                 })
                 .finally(() => {
                   isSendingMessageRef.current = false;
                 });
-              
-              return; // Stop further processing
+              return;
             } else if (isNegative) {
-              // User declined
               setMessage("");
               setProposalConfirmationPending(false);
               setProposalQuestionTime(null);
-              
+
               const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
               const declineMessage = {
                 sender: "bot",
                 text: "No problem! Let me know when you're ready.",
                 timestamp: new Date()
               };
-              
-              // Add messages directly - localStorage will sync via useEffect
+
               setChatHistory(prev => [...prev, userMessage, declineMessage]);
-              
               isSendingMessageRef.current = false;
               return;
             }
-            // If response doesn't match positive/negative, continue as normal message
-            // but reset proposal confirmation state
             setProposalConfirmationPending(false);
             setProposalQuestionTime(null);
           }
@@ -5427,7 +5546,9 @@ AI Website is built for instant replies, 24×7.<br>
                   style={{ display: showWelcome ? 'none' : 'flex' }}
                 >
                   <MessagesInnerContainer>
-                    {chatHistory.map((msg, idx) => (
+                    {chatHistory
+                      .filter((msg) => msg.text && msg.text.toString().trim().length > 0)
+                      .map((msg, idx) => (
                       <React.Fragment key={idx}>
                         <MessageBubbleComponent
                           message={{
