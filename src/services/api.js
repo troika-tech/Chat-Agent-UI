@@ -133,8 +133,12 @@ export async function getIntentConfig(apiBase, chatbotId) {
       enabled: false,
       keywords: [],
       confirmation_prompt_text: "Would you like me to send the proposal to your WhatsApp number?",
+      template_choice_prompt_text: "Which proposal should I send?",
+      template_choice_allowlist: [],
       success_message: "✅ Proposal sent to your WhatsApp number!",
       toast_message: "Proposal sent successfully! 📱",
+      prompt_for_template_choice: false,
+      media: {},
     };
   }
 }
@@ -217,7 +221,27 @@ export async function getTranscriptConfig(apiBase, chatbotId) {
  * @param {string} serviceName - Service name (optional)
  * @returns {Promise<object>} Response data
  */
-export async function sendProposal(apiBase, chatbotId, phone, serviceName) {
+export async function getProposalTemplatesPublic(apiBase, chatbotId) {
+  const response = await fetch(`${apiBase}/chatbot/${chatbotId}/whatsapp-proposal-templates`);
+  if (!response.ok) {
+    const errorMessage = await parseErrorResponse(response);
+    throw new Error(errorMessage || 'Failed to fetch proposal templates');
+  }
+  const data = await response.json();
+  // Response shape might be data or { data }
+  return data.data || data;
+}
+
+/**
+ * Send proposal to user's WhatsApp number
+ * @param {string} apiBase - Base API URL
+ * @param {string} chatbotId - Chatbot ID
+ * @param {string} phone - Phone number
+ * @param {string} serviceName - Service name (optional)
+ * @param {string} templateName - Template name/display_name to use (optional, required if choice enforced)
+ * @returns {Promise<object>} Response data
+ */
+export async function sendProposal(apiBase, chatbotId, phone, serviceName, templateName) {
   const response = await fetch(`${apiBase}/intent/send-proposal`, {
     method: 'POST',
     headers: {
@@ -227,12 +251,28 @@ export async function sendProposal(apiBase, chatbotId, phone, serviceName) {
       chatbotId,
       phone,
       serviceName,
+      template_name: templateName,
     }),
   });
 
   if (!response.ok) {
-    const errorMessage = await parseErrorResponse(response);
-    throw new Error(errorMessage || 'Failed to send proposal');
+    // Try to extract richer error (including available_templates)
+    const text = await response.text();
+    let parsed = null;
+    try {
+      parsed = JSON.parse(text || '{}');
+    } catch (e) {
+      // ignore parse errors
+    }
+    const error = new Error(
+      (parsed && (parsed.message || parsed.error)) ||
+      text ||
+      'Failed to send proposal'
+    );
+    if (parsed && parsed.available_templates) {
+      error.availableTemplates = parsed.available_templates;
+    }
+    throw error;
   }
 
   return await response.json();

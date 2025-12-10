@@ -59,7 +59,7 @@ import { playSendSound, playReceiveSound } from "../utils/soundUtils";
 
 // Import services
 import frontendInactivityManager from "../services/frontendInactivityManager";
-import { getAuthConfig, getIntentConfig, getHandoffConfig, getHandoffMessages, getTranscriptConfig, sendProposal, requestHandoff, getZohoConfig, captureLeadToZoho } from "../services/api";
+import { getAuthConfig, getIntentConfig, getHandoffConfig, getHandoffMessages, getTranscriptConfig, sendProposal, requestHandoff, getZohoConfig, captureLeadToZoho, getProposalTemplatesPublic } from "../services/api";
 
 const SupaChatbotInner = ({ chatbotId, apiBase }) => {
   const { isDarkMode } = useTheme();
@@ -212,12 +212,19 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
     confirmation_prompt_text: "Would you like me to send the proposal to your WhatsApp number?",
     success_message: "✅ Proposal sent to your WhatsApp number!",
     toast_message: "Proposal sent successfully! 📱",
+    template_choice_prompt_text: "Which proposal should I send?",
+    template_choice_allowlist: [],
+    prompt_for_template_choice: false,
+    media: {},
   });
   const [intentConfigLoading, setIntentConfigLoading] = useState(false);
 
   // Proposal confirmation state
   const [proposalConfirmationPending, setProposalConfirmationPending] = useState(false);
   const [proposalQuestionTime, setProposalQuestionTime] = useState(null);
+  const [proposalTemplates, setProposalTemplates] = useState([]);
+  const [proposalTemplateChoicePending, setProposalTemplateChoicePending] = useState(false);
+  const [proposalTemplateQuestionTime, setProposalTemplateQuestionTime] = useState(null);
   // Handoff confirmation state
   const [handoffConfig, setHandoffConfig] = useState({
     enabled: false,
@@ -1592,6 +1599,23 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       }
     };
     fetchIntentConfig();
+  }, [chatbotId, apiBase]);
+
+  // Fetch proposal templates (public) for template choice
+  useEffect(() => {
+    if (!chatbotId || !apiBase) return;
+    const fetchTemplates = async () => {
+      try {
+        const templates = await getProposalTemplatesPublic(apiBase, chatbotId);
+        // Normalize to array
+        const list = Array.isArray(templates) ? templates : (templates.data || templates.templates || []);
+        setProposalTemplates(list || []);
+      } catch (err) {
+        console.error('[Proposal Templates] ❌ Error fetching templates:', err);
+        setProposalTemplates([]);
+      }
+    };
+    fetchTemplates();
   }, [chatbotId, apiBase]);
 
   // Fetch handoff configuration
@@ -3110,7 +3134,43 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                 return;
               }
 
-              sendProposal(apiBase, chatbotId, verifiedPhone)
+              const allowlist = intentConfig.template_choice_allowlist || [];
+              const eligibleTemplates = (proposalTemplates || []).filter((tpl) => {
+                if (!allowlist.length) return false; // empty allowlist means show none
+                return allowlist.includes(tpl._id);
+              });
+              const needTemplateChoice = intentConfig.prompt_for_template_choice && eligibleTemplates.length > 1;
+
+              if (needTemplateChoice) {
+                setProposalTemplateChoicePending(true);
+                setProposalTemplateQuestionTime(Date.now());
+
+                const optionsText = eligibleTemplates
+                  .map((tpl, idx) => `${idx + 1}) ${tpl.display_name || tpl.template_name}`)
+                  .join("\n");
+
+                if (!optionsText) {
+                  const noOptions = {
+                    sender: "bot",
+                    text: "No proposals are available to choose from right now.",
+                    timestamp: new Date()
+                  };
+                  setChatHistory(prev => [...prev, noOptions]);
+                  isSendingMessageRef.current = false;
+                  return;
+                } else {
+                  const choicePrompt = {
+                    sender: "bot",
+                    text: `${(intentConfig.template_choice_prompt_text || "Which proposal should I send?").trim()}\n${optionsText}`,
+                    timestamp: new Date()
+                  };
+                  setChatHistory(prev => [...prev, choicePrompt]);
+                  isSendingMessageRef.current = false;
+                  return;
+                }
+              }
+
+              sendProposal(apiBase, chatbotId, verifiedPhone, undefined, intentConfig.proposal_template_name)
                 .then((result) => {
                   const successMessage = {
                     sender: "bot",
@@ -3151,6 +3211,104 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
             }
             setProposalConfirmationPending(false);
             setProposalQuestionTime(null);
+          }
+        }
+
+        // ===== PROPOSAL TEMPLATE CHOICE HANDLING =====
+        if (proposalTemplateChoicePending) {
+          const timeoutMinutes = intentConfig.timeout_minutes || 5;
+          const timeoutMs = timeoutMinutes * 60 * 1000;
+          if (proposalTemplateQuestionTime && (Date.now() - proposalTemplateQuestionTime) > timeoutMs) {
+            setProposalTemplateChoicePending(false);
+            setProposalTemplateQuestionTime(null);
+          } else {
+            const normalized = (textToSend || "").trim();
+            const lower = normalized.toLowerCase();
+            const number = parseInt(lower, 10);
+
+            const allowlist = intentConfig.template_choice_allowlist || [];
+            const eligibleTemplates = (proposalTemplates || []).filter((tpl) => {
+              if (!allowlist.length) return false;
+              return allowlist.includes(tpl._id);
+            });
+
+            let chosen = null;
+            if (!isNaN(number) && number >= 1 && number <= eligibleTemplates.length) {
+              chosen = eligibleTemplates[number - 1];
+            } else {
+              chosen = eligibleTemplates.find((tpl) => {
+                const dn = (tpl.display_name || "").toLowerCase();
+                const tn = (tpl.template_name || "").toLowerCase();
+                return dn === lower || tn === lower;
+              });
+            }
+
+            if (!chosen) {
+              const optionsText = eligibleTemplates
+                .map((tpl, idx) => `${idx + 1}) ${tpl.display_name || tpl.template_name}`)
+                .join("\n");
+              if (!optionsText) {
+                const noOptions = {
+                  sender: "bot",
+                  text: "No proposals are available to choose from right now.",
+                  timestamp: new Date()
+                };
+                setChatHistory(prev => [...prev, noOptions]);
+              } else {
+                const retry = {
+                  sender: "bot",
+                  text: `Please choose a proposal by number or name:\n${optionsText}`,
+                  timestamp: new Date()
+                };
+                setChatHistory(prev => [...prev, retry]);
+              }
+              isSendingMessageRef.current = false;
+              return;
+            }
+
+            setProposalTemplateChoicePending(false);
+            setProposalTemplateQuestionTime(null);
+
+            const userMessage = { sender: "user", text: textToSend, timestamp: new Date() };
+            setChatHistory(prev => [...prev, userMessage]);
+
+            const verifiedPhone = userInfo?.phone || phone || userPhone;
+            if (!verifiedPhone) {
+              const errorMessage = {
+                sender: "bot",
+                text: "I don't have your WhatsApp number. Please verify your phone number first.",
+                timestamp: new Date()
+              };
+              setChatHistory(prev => [...prev, errorMessage]);
+              isSendingMessageRef.current = false;
+              return;
+            }
+
+            const templateNameToSend = chosen.display_name || chosen.template_name;
+
+            sendProposal(apiBase, chatbotId, verifiedPhone, undefined, templateNameToSend)
+              .then(() => {
+                const successMessage = {
+                  sender: "bot",
+                  text: intentConfig.success_message || "✅ Proposal sent to your WhatsApp number!",
+                  timestamp: new Date()
+                };
+                setChatHistory(prev => [...prev, successMessage]);
+                toast.success(intentConfig.toast_message || "Proposal sent successfully! 📱");
+              })
+              .catch((error) => {
+                const errorMessage = {
+                  sender: "bot",
+                  text: `Sorry, I couldn't send the proposal: ${error.message || "An unexpected error occurred."}`,
+                  timestamp: new Date()
+                };
+                setChatHistory(prev => [...prev, errorMessage]);
+                toast.error("Failed to send proposal");
+              })
+              .finally(() => {
+                isSendingMessageRef.current = false;
+              });
+            return;
           }
         }
 
