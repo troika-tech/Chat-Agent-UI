@@ -8,7 +8,7 @@ import { ThemeProvider } from "./contexts/ThemeContext"
 import { AuthProvider } from "./contexts/AuthContext"
 
 // Constants for chatbot configuration
-const CHATBOT_ID = "6936b5fefeaca4f32d3fd5fa"
+const CHATBOT_ID = "692949c1b8c1bfbed87e7dff"
 // const API_BASE = "https://chat-apiv3.0804.in/api"
 const API_BASE = "http://localhost:5000/api"
 

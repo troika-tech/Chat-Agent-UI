@@ -703,10 +703,26 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
       setCurrentStreamingMessageId(null);
       setIsTyping(false);
       
-      // CRITICAL: Check for credit error FIRST - be extremely explicit
-      // The error object from backend has: { error: "CREDITS_EXHAUSTED", message: "..." }
+      // CRITICAL: Check for session ban error FIRST
       if (error && typeof error === 'object') {
-        // Direct check - this is the exact format from the console log
+        if (error.error === 'SESSION_BANNED') {
+          const banMessage = error.message || 'Your Session Ban so now you cannot chat for further information';
+          console.log('🚫 SESSION BAN ERROR DETECTED - Showing toast:', banMessage);
+          
+          // Dismiss any existing toasts
+          toast.dismiss();
+          
+          // Show session ban error toast
+          toast.error(banMessage, {
+            autoClose: 6000,
+            position: 'top-center',
+            toastId: 'session-ban-error'
+          });
+          
+          return; // CRITICAL: Exit immediately to prevent generic error
+        }
+        
+        // Check for credit error
         if (error.error === 'CREDITS_EXHAUSTED' || error.error === 'INSUFFICIENT_CREDITS') {
           const creditMessage = error.message || 'Credit Exhausted Please Contact to support team';
           console.log('✅ CREDIT ERROR DETECTED - Showing toast:', creditMessage);
@@ -724,7 +740,25 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
           return; // CRITICAL: Exit immediately to prevent generic error
         }
         
-        // Fallback: Check message content
+        // Fallback: Check message content for session ban
+        if (error.message && (
+          error.message.toLowerCase().includes('session ban') || 
+          error.message.toLowerCase().includes('banned')
+        )) {
+          const banMessage = error.message.includes('Session Ban') 
+            ? error.message 
+            : 'Your Session Ban so now you cannot chat for further information';
+          
+          toast.dismiss();
+          toast.error(banMessage, {
+            autoClose: 6000,
+            position: 'top-center',
+            toastId: 'session-ban-error'
+          });
+          return;
+        }
+        
+        // Fallback: Check message content for credit
         if (error.message && (
           error.message.toLowerCase().includes('credit') || 
           error.message.toLowerCase().includes('exhausted')
@@ -743,7 +777,21 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         }
       }
       
-      // Check string format
+      // Check string format for session ban
+      if (typeof error === 'string' && (
+        error.toLowerCase().includes('session ban') || 
+        error.toLowerCase().includes('banned')
+      )) {
+        toast.dismiss();
+        toast.error('Your Session Ban so now you cannot chat for further information', {
+          autoClose: 6000,
+          position: 'top-center',
+          toastId: 'session-ban-error'
+        });
+        return;
+      }
+      
+      // Check string format for credit
       if (typeof error === 'string' && (
         error.toLowerCase().includes('credit') || 
         error.toLowerCase().includes('exhausted')
@@ -757,8 +805,8 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         return;
       }
       
-      // Generic error - only show if NOT a credit error
-      console.log('⚠️ Showing generic error (not a credit error)');
+      // Generic error - only show if NOT a special error
+      console.log('⚠️ Showing generic error (not a special error)');
       toast.dismiss();
       toast.error('Failed to get response. Please try again.', {
         toastId: 'generic-error'
@@ -2412,18 +2460,37 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
                         }
 
                         // Check if this is an error event or error data
-                        if (currentEventType === 'error' || parsed.error === 'CREDITS_EXHAUSTED' || parsed.error === 'INSUFFICIENT_CREDITS') {
-                          console.log('✅ Credit error detected in manual stream!', parsed);
-                          setIsTyping(false);
-                          setCurrentStreamingMessageId(null);
-                          setManualStreamingResponse('');
-                          const creditMessage = parsed.message || 'Credit Exhausted Please Contact to support team';
-                          toast.error(creditMessage, {
-                            autoClose: 5000,
-                            position: 'top-center'
-                          });
-                          isComplete = true;
-                          return;
+                        if (currentEventType === 'error' || parsed.error) {
+                          // Check for session ban error first
+                          if (parsed.error === 'SESSION_BANNED') {
+                            console.log('🚫 Session ban error detected in manual stream!', parsed);
+                            setIsTyping(false);
+                            setCurrentStreamingMessageId(null);
+                            setManualStreamingResponse('');
+                            const banMessage = parsed.message || 'Your Session Ban so now you cannot chat for further information';
+                            toast.error(banMessage, {
+                              autoClose: 6000,
+                              position: 'top-center',
+                              toastId: 'session-ban-error'
+                            });
+                            isComplete = true;
+                            return;
+                          }
+                          
+                          // Check for credit error
+                          if (parsed.error === 'CREDITS_EXHAUSTED' || parsed.error === 'INSUFFICIENT_CREDITS') {
+                            console.log('✅ Credit error detected in manual stream!', parsed);
+                            setIsTyping(false);
+                            setCurrentStreamingMessageId(null);
+                            setManualStreamingResponse('');
+                            const creditMessage = parsed.message || 'Credit Exhausted Please Contact to support team';
+                            toast.error(creditMessage, {
+                              autoClose: 5000,
+                              position: 'top-center'
+                            });
+                            isComplete = true;
+                            return;
+                          }
                         }
 
                         if (parsed.content) {
@@ -2483,7 +2550,21 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
             setIsTyping(false);
             setCurrentStreamingMessageId(null);
             setManualStreamingResponse('');
-            toast.error('Failed to send message. Please try again.');
+            
+            // Check if it's a session ban error
+            const errorMessage = error?.message || error?.error?.message || String(error);
+            if (error?.error === 'SESSION_BANNED' || 
+                errorMessage.toLowerCase().includes('session ban') || 
+                errorMessage.toLowerCase().includes('banned')) {
+              const banMessage = error?.message || 'Your Session Ban so now you cannot chat for further information';
+              toast.error(banMessage, {
+                autoClose: 6000,
+                position: 'top-center',
+                toastId: 'session-ban-error'
+              });
+            } else {
+              toast.error('Failed to send message. Please try again.');
+            }
           });
         }, 50); // 50ms delay to allow state to clear
       }
@@ -3617,9 +3698,18 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         setCurrentStreamingMessageId(null);
         setIsTyping(false);
         
-        // Check if it's a credit error
+        // Check if it's a session ban error
         const errorMessage = error?.message || error?.error?.message || String(error);
-        if (errorMessage.includes('Credit') || errorMessage.includes('credit') || 
+        if (error?.error === 'SESSION_BANNED' || 
+            errorMessage.toLowerCase().includes('session ban') || 
+            errorMessage.toLowerCase().includes('banned')) {
+          const banMessage = error?.message || 'Your Session Ban so now you cannot chat for further information';
+          toast.error(banMessage, {
+            autoClose: 6000,
+            position: 'top-center',
+            toastId: 'session-ban-error'
+          });
+        } else if (errorMessage.includes('Credit') || errorMessage.includes('credit') || 
             error?.error === 'CREDITS_EXHAUSTED' || error?.error === 'INSUFFICIENT_CREDITS') {
           toast.error('Credit Exhausted Please Contact to support team', {
             autoClose: 5000,

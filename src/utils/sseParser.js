@@ -70,7 +70,32 @@ export class SSEStreamReader {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Try to parse error response body for detailed error message
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        let errorData = null;
+        
+        try {
+          const text = await response.text();
+          if (text) {
+            try {
+              errorData = JSON.parse(text);
+              errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch (e) {
+              errorMessage = text || errorMessage;
+            }
+          }
+        } catch (e) {
+          // If reading fails, use default error message
+        }
+        
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        error.data = errorData;
+        if (errorData) {
+          error.error = errorData.error;
+          error.message = errorData.message || errorMessage;
+        }
+        throw error;
       }
 
       if (!response.body) {
