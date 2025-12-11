@@ -69,7 +69,7 @@ const MessageBubble = styled.div`
   width: ${(props) => (props.$isUser ? "fit-content" : "100%")};
   max-width: ${(props) => (props.$isUser ? "80%" : "100%")};
   min-width: ${(props) => (props.$isUser ? "auto" : "clamp(50px, 5vw, 60px)")};
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   box-shadow: ${(props) => (props.$isPricing || props.$isSales || !props.$isUser ? 'none' : '0 10px 40px rgba(0, 0, 0, 0.15)')};
   transform: scale(1);
   transition: transform 0.2s ease, background 0.3s ease, color 0.3s ease;

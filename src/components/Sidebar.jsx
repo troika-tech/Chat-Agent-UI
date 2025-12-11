@@ -293,7 +293,7 @@ const Logo = styled.div`
 `;
 
 const LogoText = styled.span`
-  font-family: "Amaranth", sans-serif;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   font-size: 20px !important;
   font-weight: 600;
   color: ${props => props.$isDarkMode ? '#ffffff' : '#000000'};

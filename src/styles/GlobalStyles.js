@@ -2,7 +2,7 @@ import { createGlobalStyle } from "styled-components";
 
 const GlobalStyle = createGlobalStyle`
     * {
-      font-family: "Libre Baskerville", "Hanken Grotesk", "Amaranth", "Poppins", serif !important;
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
       box-sizing: border-box;
     }
     

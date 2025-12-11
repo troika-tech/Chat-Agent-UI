@@ -145,7 +145,7 @@ export const Wrapper = styled.div`
     }
   }
 
-  font-family: "Libre Baskerville", "Hanken Grotesk", "Amaranth", "Poppins", serif;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
 `;
 
 export const Overlay = styled.div`

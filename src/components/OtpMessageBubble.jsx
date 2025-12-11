@@ -78,7 +78,7 @@ const MessageBubble = styled.div`
   width: 100%;
   max-width: 100%;
   min-width: 60px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   transform: scale(1);
   transition: transform 0.2s ease, background 0.3s ease, color 0.3s ease;

@@ -3881,7 +3881,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         setTimeout(() => {
           const botMessage = {
             sender: "bot",
-            text: `<div style='text-align: left; line-height: 1.6; color: #374151; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;'>
+            text: `<div style='text-align: left; line-height: 1.6; color: #374151; font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;'>
               <div style='font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; color: #1f2937; text-align: center; background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;'>🎯 FINAL RESULT</div>
               <div style='background: linear-gradient(135deg, #1f2937, #374151); padding: 2rem; border-radius: 12px; margin-bottom: 1.5rem; color: white; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);'>
                 <div style='font-size: 1.8rem; font-weight: 700; margin-bottom: 1.5rem; color: #fbbf24; text-align: center; display: flex; align-items: center; justify-content: center;'>
@@ -3934,7 +3934,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
 
     // Static FAQ responses for AI website questions
     const staticFAQs = {
-      "Pricing": `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+      "Pricing": `<div style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #2563eb; margin-bottom: 20px; font-size: 24px; font-weight: 700;">AI WEBSITE PLANS & PRICING</h2>
         
         <div style="margin: 20px 0; overflow-x: auto; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
@@ -4056,7 +4056,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         </div>
       </div>`,
 
-      "FAQs": `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+      "FAQs": `<div style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #2563eb; margin-bottom: 30px; font-size: 28px; font-weight: 700; text-align: center;">AI WEBSITES - FREQUENTLY ASKED QUESTIONS</h2>
         
         <div style="margin-bottom: 40px;">
@@ -4141,7 +4141,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         </div>
       </div>`,
 
-      "inbound-calling": `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+      "inbound-calling": `<div style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #2563eb; margin-bottom: 30px; font-size: 28px; font-weight: 700; text-align: center;">INBOUND CALLING AGENT</h2>
         
         <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px;">
@@ -4197,7 +4197,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         </div>
       </div>`,
 
-      "outbound-calling": `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+      "outbound-calling": `<div style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #2563eb; margin-bottom: 30px; font-size: 28px; font-weight: 700; text-align: center;">OUTBOUND CALLING AGENT</h2>
         
         <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px;">
@@ -4253,7 +4253,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         </div>
       </div>`,
 
-      "calling-pricing": `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+      "calling-pricing": `<div style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #2563eb; margin-bottom: 30px; font-size: 28px; font-weight: 700; text-align: center;">AI CALLING AGENT PRICING</h2>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-bottom: 30px;">
@@ -4315,7 +4315,7 @@ const SupaChatbotInner = ({ chatbotId, apiBase }) => {
         </div>
       </div>`,
 
-      "calling-faqs": `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333;">
+      "calling-faqs": `<div style="font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; line-height: 1.6; color: #333;">
         <h2 style="color: #2563eb; margin-bottom: 30px; font-size: 28px; font-weight: 700; text-align: center;">AI CALLING AGENT - FAQs</h2>
         
         <div style="margin-bottom: 40px;">

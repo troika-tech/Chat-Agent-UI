@@ -4,7 +4,7 @@ html {
 }
 
 :root {
-  font-family: "Libre Baskerville", "Hanken Grotesk", "Amaranth", "Poppins", serif !important;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif !important;
   line-height: 1.5;
   font-weight: 400;
 

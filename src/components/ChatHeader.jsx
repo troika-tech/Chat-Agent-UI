@@ -366,7 +366,7 @@ const StatusBlock = styled.div`
 `;
 
 const BotName = styled.div`
-  font-family: "Segoe UI", sans-serif;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   font-weight: 600;
   color: ${props => props.$isDarkMode ? '#ffffff' : '#1f2937'};
   font-size: clamp(1.1rem, 2vw, 1.4rem);
