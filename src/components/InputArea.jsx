@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import { FiArrowUp, FiMic, FiSquare, FiSend } from "react-icons/fi";
 import { IoSend } from "react-icons/io5";
+import { Mic, Send } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
 import ServiceSuggestions from "./ServiceSuggestions";
 import AutoSuggestions from "./AutoSuggestions";
@@ -377,46 +378,39 @@ const ActionButton = styled.button`
 `;
 
 const SendButton = styled.button`
-  background: #000000;
+  background: #4f46e5;
   border: none;
-  border-radius: clamp(10px, 2vw, 12px);
-  width: clamp(40px, 4vw, 44px);
-  height: clamp(40px, 4vw, 44px);
-  min-width: clamp(40px, 4vw, 44px);
-  min-height: clamp(40px, 4vw, 44px);
+  border-radius: 0.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: white;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   flex-shrink: 0;
-  padding: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.15);
+  padding: 0.75rem;
+  width: auto;
+  height: auto;
+  min-width: auto;
+  min-height: auto;
   
   /* Touch-friendly on mobile */
   @media (max-width: 768px) {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
-    border-radius: 10px;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
   }
 
   svg {
     color: inherit;
     flex-shrink: 0;
-    font-size: clamp(16px, 2.5vw, 18px);
-    width: clamp(14px, 2vw, 16px);
-    height: clamp(14px, 2vw, 16px);
-    font-weight: 900;
-    stroke-width: 3;
+    width: 20px;
+    height: 20px;
   }
 
   &:hover:not(:disabled) {
-    transform: translateY(-2px) scale(1.05);
-    background: #1a1a1a;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), 0 3px 6px rgba(0, 0, 0, 0.25);
+    transform: scale(1.05);
+    background: #4338ca;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
   &:active:not(:disabled) {
@@ -752,6 +746,101 @@ const MuteButton = styled.button`
     svg {
       font-size: 13px; /* Increased by 15% from 11px */
     }
+  }
+`;
+
+const NewInputWrapper = styled.div`
+  width: 100%;
+  max-width: 42rem; /* max-w-2xl */
+`;
+
+const NewInputBox = styled.div`
+  background: rgba(255, 255, 255, 0.7); /* bg-white/70 */
+  backdrop-filter: blur(4px); /* backdrop-blur-sm */
+  border: 1px solid rgba(255, 255, 255, 0.3); /* border border-white/30 */
+  border-radius: 1rem; /* rounded-2xl */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+  padding: 0.5rem; /* p-2 */
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* gap-3 */
+`;
+
+const NewInput = styled.input`
+  flex: 1;
+  background: transparent;
+  padding: 0.75rem 1rem; /* px-4 py-3 */
+  color: #1f2937; /* text-gray-800 */
+  outline: none;
+  border: none;
+  
+  &::placeholder {
+    color: #9ca3af; /* placeholder-gray-400 */
+  }
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const MicButton = styled.button`
+  padding: 0.75rem; /* p-3 */
+  border-radius: 0.75rem; /* rounded-xl */
+  transition: all 0.2s; /* transition-all duration-200 */
+  border: none;
+  background: transparent;
+  color: #9ca3af; /* text-gray-600 */
+  cursor: not-allowed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  
+  &:hover {
+    background: transparent;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  svg {
+    width: 1.25rem; /* w-5 */
+    height: 1.25rem; /* h-5 */
+    flex-shrink: 0;
+  }
+`;
+
+const SendButtonNew = styled.button`
+  background: #4f46e5; /* bg-indigo-600 */
+  color: white;
+  border-radius: 0.75rem; /* rounded-xl */
+  padding: 0.75rem; /* p-3 */
+  transition: all 0.2s; /* transition-all duration-200 */
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &:hover:not(:disabled) {
+    background: #4338ca; /* hover:bg-indigo-700 */
+    transform: scale(1.05); /* hover:scale-105 */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* hover:shadow-lg */
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  svg {
+    width: 1.25rem; /* w-5 */
+    height: 1.25rem; /* h-5 */
+    flex-shrink: 0;
   }
 `;
 
@@ -1139,126 +1228,85 @@ const InputArea = ({
 
   return (
     <InputContainer $isDarkMode={isDarkMode} $isWelcomeMode={isWelcomeMode}>
-      <InputWrapper $isWelcomeMode={isWelcomeMode}>
-        {/* Auto Suggestions - Disabled */}
-        {/* {showSuggestions && !isTyping && (
-          <AutoSuggestions
-            inputValue={message}
-            onSuggestionClick={handleAutoSuggestionClick}
-            isWelcomeMode={isWelcomeMode}
-            showBelow={userMessageCount === 0}
-          />
-        )} */}
-
-        <ChatInput
-          $isDarkMode={isDarkMode}
-          value={message}
-          type={authPhoneState && !verified ? "tel" : "text"}
-          inputMode={authPhoneState && !verified ? "numeric" : "text"}
-          pattern={authPhoneState && !verified ? "[0-9]*" : undefined}
-          onChange={(e) => {
-            let newValue = e.target.value;
-            // Restrict to numbers only when asking for phone number
-            if (authPhoneState && !verified) {
-              // Only allow digits, spaces, +, and - (for phone number formats)
-              newValue = newValue.replace(/[^\d\+\-\s]/g, '');
-            }
-            setMessage(newValue);
-            // Suggestions disabled
-            // if (newValue.trim().length > 0) {
-            //   setShowSuggestions(true);
-            // } else {
-            //   setShowSuggestions(false);
-            // }
-          }}
-          onKeyDown={(e) => {
-            // Block non-numeric keys when asking for phone number (except backspace, delete, arrow keys, etc.)
-            if (authPhoneState && !verified) {
-              const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Enter'];
-              const isNumber = /^\d$/.test(e.key);
-              const isAllowedKey = allowedKeys.includes(e.key);
-              const isModifier = e.ctrlKey || e.metaKey || e.altKey;
-              
-              // Allow numbers, allowed keys, and modifier combinations (for copy/paste)
-              if (!isNumber && !isAllowedKey && !isModifier && !e.shiftKey) {
+      <NewInputWrapper>
+        <NewInputBox>
+          <NewInput
+            value={message}
+            type={authPhoneState && !verified ? "tel" : "text"}
+            inputMode={authPhoneState && !verified ? "numeric" : "text"}
+            pattern={authPhoneState && !verified ? "[0-9]*" : undefined}
+            onChange={(e) => {
+              let newValue = e.target.value;
+              // Restrict to numbers only when asking for phone number
+              if (authPhoneState && !verified) {
+                // Only allow digits, spaces, +, and - (for phone number formats)
+                newValue = newValue.replace(/[^\d\+\-\s]/g, '');
+              }
+              setMessage(newValue);
+            }}
+            onKeyDown={(e) => {
+              // Handle Enter key to send message
+              if (e.key === 'Enter' && !isTyping && !shouldDisable) {
                 e.preventDefault();
+                handleSendMessage();
                 return;
               }
-            }
-            handleKeyPress(e);
-          }}
-          onFocus={() => {
-            setShowSuggestions(false);
-            setIsInputFocused(true);
-          }}
-          onBlur={() => {
-            setTimeout(() => {
+              
+              // Block non-numeric keys when asking for phone number (except backspace, delete, arrow keys, etc.)
+              if (authPhoneState && !verified) {
+                const allowedKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Enter'];
+                const isNumber = /^\d$/.test(e.key);
+                const isAllowedKey = allowedKeys.includes(e.key);
+                const isModifier = e.ctrlKey || e.metaKey || e.altKey;
+                
+                // Allow numbers, allowed keys, and modifier combinations (for copy/paste)
+                if (!isNumber && !isAllowedKey && !isModifier && !e.shiftKey) {
+                  e.preventDefault();
+                  return;
+                }
+              }
+              handleKeyPress(e);
+            }}
+            onFocus={() => {
               setShowSuggestions(false);
-              setIsInputFocused(false);
-            }, 200);
-          }}
-          placeholder={getPlaceholderText()}
-          disabled={shouldDisable}
-          style={{
-            opacity: shouldDisable ? 0.6 : 1,
-            cursor: shouldDisable ? "not-allowed" : "text"
-          }}
-        />
-        <InputButtons>
-          <ActionButton
-            $variant="secondary"
-            $isRecording={false}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleMicClick();
+              setIsInputFocused(true);
             }}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleMicTouchStart(e);
+            onBlur={() => {
+              setTimeout(() => {
+                setShowSuggestions(false);
+                setIsInputFocused(false);
+              }, 200);
             }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleMicTouchEnd(e);
-            }}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleMicMouseDown(e);
-            }}
-            onMouseUp={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleMicMouseUp(e);
-            }}
+            placeholder={getPlaceholderText()}
+            disabled={shouldDisable}
+          />
+          
+          <MicButton
+            $isRecording={isRecording}
             disabled={true}
             title="Microphone feature is disabled"
-            style={{
-              background: 'transparent',
-              color: '#9ca3af',
-              opacity: 0.5,
-              cursor: 'not-allowed',
-              pointerEvents: 'auto'
-            }}
-          >
-            <FiMic />
-          </ActionButton>
-          <SendButton
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (!isTyping) {
+            }}
+          >
+            <Mic size={20} />
+          </MicButton>
+          
+          <SendButtonNew
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!isTyping && !shouldDisable) {
                 handleSendMessage();
               }
             }}
             disabled={shouldDisable}
           >
-            <FiSend />
-          </SendButton>
-        </InputButtons>
-      </InputWrapper>
+            <Send size={20} />
+          </SendButtonNew>
+        </NewInputBox>
+      </NewInputWrapper>
 
       {/* Service Suggestions - hidden */}
       {/* <ServiceSuggestions

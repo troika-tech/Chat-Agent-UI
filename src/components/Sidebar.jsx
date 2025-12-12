@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import PremiumFeatureModal from "./PremiumFeatureModal";
 import WhatsAppProposalModal from "./WhatsAppProposalModal";
 import axios from "axios";
+import { X } from "lucide-react";
 import {
   // Navigation & Basic
   FaHome,
@@ -125,7 +126,6 @@ import {
   FaYoutube,
   FaCalendarAlt,
   FaChevronDown,
-  FaTimes,
 } from "react-icons/fa";
 import {
   FiFacebook,
@@ -143,10 +143,19 @@ import {
 } from "react-icons/fi";
 
 const SidebarContainer = styled.div`
-  width: ${props => props.$isCollapsed ? '70px' : 'clamp(280px, 22vw, 320px)'};
+  width: ${props => props.$isCollapsed ? '100px' : '320px'};
   height: 100vh;
   max-height: 100vh;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border-radius: ${props => {
+    const isCollapsed = Boolean(props.$isCollapsed);
+    const radius = isCollapsed ? '1.5rem' : '1rem';
+    return `0 ${radius} ${radius} 0`;
+  }} !important;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -154,24 +163,13 @@ const SidebarContainer = styled.div`
   overflow-y: auto;
   overflow-x: hidden;
   flex-shrink: 0;
-  transition: width 0.3s ease;
+  transition: width 0.3s ease, border-radius 0.3s ease;
   
   /* Responsive width */
   @media (max-width: 1024px) {
-    width: ${props => props.$isCollapsed ? '70px' : 'clamp(300px, 30vw, 340px)'};
+    width: ${props => props.$isCollapsed ? '90px' : '320px'};
   }
 
-  /* Hide scrollbar for all browsers */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
-  
-  &::-webkit-scrollbar {
-    display: none; /* WebKit browsers */
-  }
-
-  /* Smooth scrolling for mobile */
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
 
   /* Hide close button on desktop */
   .mobile-close-btn {
@@ -181,8 +179,17 @@ const SidebarContainer = styled.div`
   /* Professional Navigation Styles */
   .nav-item {
     transition: all 0.2s ease;
-    border-radius: 8px;
+    border-radius: 0.75rem;
     margin: 0;
+  }
+  
+  /* Increased border-radius when collapsed - rounded square/pill shape */
+  &[data-collapsed="true"] .nav-item {
+    border-radius: 1rem;
+  }
+  
+  &[data-collapsed="true"] .nav-item.active {
+    border-radius: 1rem;
   }
 
   .nav-item:hover {
@@ -194,12 +201,13 @@ const SidebarContainer = styled.div`
   .nav-item.active {
     background: #eef2ff;
     border: none;
-    border-left: 2px solid #4f46e5;
+    border-left: 2px solid #6366f1;
     font-weight: 600;
+    color: #4338ca;
   }
 
   .nav-item.active .nav-icon {
-    color: #4f46e5;
+    color: #6366f1;
   }
 
 
@@ -213,11 +221,14 @@ const SidebarContainer = styled.div`
     top: 0;
     transform: ${props => props.$isOpen ? 'translateX(0)' : 'translateX(-100%)'};
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;
-    box-shadow: ${props => props.$isOpen ? '4px 0 20px rgba(0, 0, 0, 0.3)' : 'none'};
+    box-shadow: ${props => props.$isOpen ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)' : 'none'};
     display: ${props => props.$isOpen ? 'flex' : 'flex'};
     z-index: 10000;
     overflow-y: auto;
     overflow-x: hidden;
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     
     /* Show close button on mobile */
     .mobile-close-btn {
@@ -236,8 +247,11 @@ const SidebarContainer = styled.div`
     top: 0;
     transform: ${props => props.$isOpen ? 'translateX(0)' : 'translateX(-100%)'};
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;
-    box-shadow: ${props => props.$isOpen ? '4px 0 20px rgba(0, 0, 0, 0.3)' : 'none'};
+    box-shadow: ${props => props.$isOpen ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)' : 'none'};
     z-index: 10000;
+    background: #ffffff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     
     .mobile-close-btn {
       display: flex !important;
@@ -262,7 +276,7 @@ const SidebarContainer = styled.div`
 `;
 
 const SidebarHeader = styled.div`
-  padding: ${props => props.$isCollapsed ? '0.75rem' : '1.25rem 1.5rem'};
+  padding: ${props => props.$isCollapsed ? '0.75rem' : '1.5rem'};
   border-bottom: none;
   display: flex;
   align-items: center;
@@ -273,7 +287,7 @@ const SidebarHeader = styled.div`
   flex-shrink: 0;
   
   @media (max-width: 768px) {
-    padding: 1rem;
+    padding: 1.5rem;
     min-height: 60px;
     justify-content: space-between;
   }
@@ -294,14 +308,20 @@ const Logo = styled.div`
 
 const LogoText = styled.span`
   font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-  font-size: 20px !important;
-  font-weight: 600;
-  color: ${props => props.$isDarkMode ? '#ffffff' : '#000000'};
+  font-size: 1.25rem !important; /* text-xl = 20px - matches -llamacoder exactly */
+  font-weight: bold;
+  color: ${props => props.$isDarkMode ? '#ffffff' : '#111827'};
   word-wrap: break-word;
   overflow-wrap: break-word;
   line-height: 1.3;
   flex: 1;
   min-width: 0;
+  letter-spacing: -0.025em; /* tracking-tight */
+  transition: color 0.2s ease;
+  
+  @media (max-width: 768px) {
+    font-size: 1.25rem !important;
+  }
 `;
 
 const ChevronDown = styled(FaChevronDown)`
@@ -312,10 +332,25 @@ const ChevronDown = styled(FaChevronDown)`
 
 const SidebarContent = styled.div`
   flex: 1;
-  padding: 1rem 0;
+  padding: 0;
+  margin-top: 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: clamp(0.75rem, 1vw, 1rem);
+  gap: 0.5rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  
+  /* Hide scrollbar for all browsers */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  
+  &::-webkit-scrollbar {
+    display: none; /* WebKit browsers */
+  }
+  
+  /* Smooth scrolling for mobile */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 `;
 
 const Section = styled.div`
@@ -323,8 +358,8 @@ const Section = styled.div`
   flex-direction: column;
   align-items: stretch;
   width: 100%;
-  gap: clamp(0.625rem, 1vw, 0.75rem);
-  padding: 0 1rem;
+  gap: 0.5rem;
+  padding: 0 1.5rem;
 `;
 
 const SectionTitle = styled.div`
@@ -338,59 +373,51 @@ const SectionTitle = styled.div`
 `;
 
 const NavIcon = styled.div`
-  font-size: clamp(1rem, 1.5vw, 1.125rem);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(18px, 2vw, 22px);
-  height: clamp(18px, 2vw, 22px);
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
-  color: #000000;
+  color: inherit;
+  transition: color 0.2s ease;
+  
+  svg {
+    width: 20px;
+    height: 20px;
+  }
 `;
 
 const NavItem = styled.button`
   width: 100%;
   box-sizing: border-box;
-  padding: ${props => props.$isCollapsed ? '0.4rem' : 'clamp(0.5rem, 1.2vw, 0.625rem) clamp(0.75rem, 2vw, 1rem)'};
-  background: transparent;
+  padding: 0.75rem;
+  background: ${props => props.$isActive ? '#eef2ff' : '#f9fafb'};
   border: none;
+  border-left: ${props => props.$isActive ? '2px solid #6366f1' : 'none'};
   outline: none;
-  color: #111827;
+  color: ${props => props.$isActive ? '#4338ca' : '#374151'};
   text-align: ${props => props.$isCollapsed ? 'center' : 'left'};
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: ${props => props.$isCollapsed ? 'center' : 'flex-start'};
-  gap: ${props => props.$isCollapsed ? '0' : 'clamp(0.75rem, 1.5vw, 1rem)'};
-  font-size: clamp(0.875rem, 1.5vw, 0.9375rem);
-  font-weight: 500;
+  gap: 0.75rem;
   transition: all 0.2s ease;
-  border-radius: 16px;
+  border-radius: ${props => props.$isCollapsed ? '1rem' : '0.75rem'};
   position: relative;
-  min-height: ${props => props.$isCollapsed ? '36px' : 'clamp(40px, 3.5vw, 44px)'};
   margin: 0;
   white-space: nowrap;
-
-  /* Touch-friendly on mobile */
-  @media (max-width: 768px) {
-    min-height: 44px;
-    padding: clamp(0.75rem, 2vw, 0.875rem) clamp(1rem, 2.5vw, 1.25rem);
-    text-align: left;
-    justify-content: flex-start;
-    gap: clamp(0.75rem, 1.5vw, 1rem);
-    border-radius: 12px;
-    width: 100%;
-  }
+  font-size: 0.875rem; /* 14px - ensures base font size */
 
   &:hover {
-    background: #f3f4f6;
-    border: none;
+    background: ${props => props.$isActive ? '#eef2ff' : '#f3f4f6'};
+    border-left: ${props => props.$isActive ? '2px solid #6366f1' : 'none'};
   }
 
   &:active {
-    background: #e0e7ff;
-    border: none;
-    border-left: 2px solid #4f46e5;
+    background: ${props => props.$isActive ? '#eef2ff' : '#f3f4f6'};
+    border-left: ${props => props.$isActive ? '2px solid #6366f1' : 'none'};
     outline: none;
   }
 
@@ -400,12 +427,8 @@ const NavItem = styled.button`
 
   &.active {
     background: #eef2ff;
-    border: none;
-    color: ${props => props.$isDarkMode ? '#c7d2fe' : '#4f46e5'};
-  }
-
-  &:hover ${NavIcon}, &.active ${NavIcon} {
-    color: #4f46e5;
+    border-left: 2px solid #6366f1;
+    color: #4338ca;
   }
 `;
 
@@ -415,12 +438,48 @@ const NavText = styled.span`
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
+  font-size: 0.875rem !important; /* 14px - text-sm for both active and inactive */
+  font-weight: 500; /* font-medium */
+  line-height: 1.25rem; /* matches Tailwind text-sm line-height */
+`;
+
+const CloseButton = styled.button`
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #f3f4f6;
+    transform: scale(1.1);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+  }
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: #4b5563;
+    stroke-width: 2.5;
+    font-weight: 400;
+    display: block;
+  }
 `;
 
 const SocialIconsContainer = styled.div`
   padding: 1.5rem 1rem;
-  border-top: 1px solid #d1d5db;
-  width: 90%;
+  border-top: 1px solid rgba(229, 231, 235, 0.5);
+  width: 100%;
   align-self: center;
   margin-left: auto;
   margin-right: auto;
@@ -431,13 +490,13 @@ const SocialIconsContainer = styled.div`
 
   /* Reduced spacing on mobile */
   @media (max-width: 768px) {
-    gap: 0.75rem;
-    padding: 1.25rem 0.75rem;
+    gap: 1rem;
+    padding: 1.5rem 1rem;
   }
 
   @media (max-width: 480px) {
-    gap: 0.5rem;
-    padding: 1rem 0.5rem;
+    gap: 1rem;
+    padding: 1.5rem 1rem;
   }
 `;
 
@@ -449,15 +508,15 @@ const SocialIcon = styled.a`
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
+  border-radius: 0.625rem;
   background: transparent;
   color: ${props => props.$isDarkMode ? '#9ca3af' : '#6b7280'};
   border: none;
   transition: all 0.2s ease;
 
   svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     stroke-width: 1.7;
   }
 
@@ -470,10 +529,10 @@ const SocialIcon = styled.a`
 
   /* Touch-friendly on mobile */
   @media (max-width: 768px) {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
 
     svg {
       width: 22px;
@@ -482,27 +541,26 @@ const SocialIcon = styled.a`
   }
 
   &:hover {
-    background: ${props => props.$isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#f5f6f7'};
+    background: #f3f4f6;
     color: ${props => props.$isDarkMode ? '#f3f4f6' : '#374151'};
-    border-color: ${props => props.$isDarkMode ? '#f3f4f6' : '#4b5563'};
-    transform: translateY(-2px);
+    transform: scale(1.1);
   }
 
   &:active {
-    transform: translateY(0);
+    transform: scale(1);
   }
 `;
 
 const PoweredByContainer = styled.div`
-  padding: 0.75rem 1rem;
+  padding: 0 1.5rem 1.5rem 1.5rem;
   margin-top: auto;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   color: ${props => props.$isDarkMode ? '#9ca3af' : '#6b7280'};
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.75rem; /* text-xs = 12px */
+  font-weight: 400;
 `;
 
 const PoweredByLink = styled.a`
@@ -514,6 +572,14 @@ const PoweredByLink = styled.a`
   &:hover {
     color: #8b5cf6;
   }
+`;
+
+const CloseButtonContainer = styled.div`
+  padding: 1.5rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: auto;
 `;
 
 const MobileOverlay = styled.div`
@@ -541,6 +607,7 @@ const CollapsedContent = styled.div`
   display: ${props => props.$isCollapsed ? 'none' : 'block'};
   overflow: hidden;
   white-space: nowrap;
+  width: 100%;
 `;
 
 const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigation, chatbotId, apiBase, authenticatedPhone }) => {
@@ -1047,7 +1114,6 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
       'FaYoutube': FaYoutube,
       'FaCalendarAlt': FaCalendarAlt,
       'FaChevronDown': FaChevronDown,
-      'FaTimes': FaTimes,
     };
 
     const IconComponent = iconMap[iconName];
@@ -1087,7 +1153,12 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
   return (
     <>
       <MobileOverlay $isOpen={isOpen} onClick={onClose} />
-      <SidebarContainer $isDarkMode={isDarkMode} $isOpen={isOpen} $isCollapsed={isCollapsed && !isMobile}>
+      <SidebarContainer 
+        $isDarkMode={isDarkMode} 
+        $isOpen={isOpen} 
+        $isCollapsed={isCollapsed && !isMobile}
+        data-collapsed={isCollapsed && !isMobile ? 'true' : 'false'}
+      >
         <SidebarHeader $isDarkMode={isDarkMode} $isCollapsed={isCollapsed && !isMobile}>
           {isCollapsed && !isMobile ? (
             <div 
@@ -1119,8 +1190,8 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
             </div>
           ) : (
             <CollapsedContent $isCollapsed={false}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'space-between', width: '100%', minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   {!sidebarConfigLoading && sidebarEnabled && headerEnabled ? (
                     <>
                       {headerLogoUrl && (
@@ -1129,7 +1200,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                             href={headerLogoLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', marginRight: '8px' }}
+                            style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}
                           >
                             <img
                               src={headerLogoUrl}
@@ -1155,8 +1226,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                               width: "auto",
                               maxWidth: "120px",
                               objectFit: "contain",
-                              filter: isDarkMode ? "brightness(0.9)" : "none",
-                              marginRight: '8px'
+                              filter: isDarkMode ? "brightness(0.9)" : "none"
                             }}
                             onError={(e) => {
                               e.target.style.display = "none";
@@ -1174,75 +1244,12 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                     ) : null
                   )}
                 </div>
-                {/* Mobile close button */}
-                {isMobile && (
-                  <button
-                    onClick={onClose}
-                    className="mobile-close-btn"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: isDarkMode ? '#ffffff' : '#000000',
-                      fontSize: '24px',
-                      cursor: 'pointer',
-                      padding: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      outline: 'none',
-                      borderRadius: '6px',
-                      transition: 'background 0.2s ease',
-                      minWidth: '40px',
-                      minHeight: '40px',
-                      flexShrink: 0,
-                      marginLeft: 'auto',
-                      marginRight: '-1rem'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = 'transparent';
-                    }}
-                    title="Close sidebar"
-                  >
-                    <FaTimes />
-                  </button>
-                )}
-                {!isMobile && (
-                  <button
-                    onClick={onClose}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: isDarkMode ? '#ffffff' : '#1f2937',
-                      fontSize: '24px',
-                      cursor: 'pointer',
-                      padding: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      outline: 'none',
-                      position: 'absolute',
-                      top: '50%',
-                      right: 'clamp(12px, 2vw, 16px)',
-                      transform: 'translateY(-50%)',
-                      borderRadius: '6px',
-                      transition: 'background 0.2s ease',
-                      minWidth: '40px',
-                      minHeight: '40px'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = 'transparent';
-                    }}
-                    title="Close sidebar"
-                  >
-                    <FaTimes />
-                  </button>
-                )}
+                <CloseButton
+                  onClick={onClose}
+                  title="Close sidebar"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </CloseButton>
               </div>
             </CollapsedContent>
           )}
@@ -1253,12 +1260,13 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
             <NavItem
               $isDarkMode={isDarkMode}
               $isCollapsed={isCollapsed && !isMobile}
+              $isActive={isActive('/') || isActive('/new-chat') || isActive('/chat') || isActive('/home')}
               onClick={() => handlePageChange('new-chat')}
               className={navClass(['/', '/new-chat', '/chat', '/home'])}
               title={isCollapsed && !isMobile ? 'New Chat' : ''}
             >
           <NavIcon><FiMessageSquare /></NavIcon>
-              {(!isCollapsed || isMobile) && <NavText>New Chat</NavText>}
+              {(!isCollapsed || isMobile) && <NavText $isActive={isActive('/') || isActive('/new-chat') || isActive('/chat') || isActive('/home')}>New Chat</NavText>}
             </NavItem>
           </Section>
 
@@ -1281,6 +1289,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
               <NavItem
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
+                $isActive={isActive('/ai-whatsapp')}
                 onClick={handleWhatsAppClick}
                 className={navClass(['/ai-whatsapp'])}
                 title={isCollapsed && !isMobile ? whatsappText : ''}
@@ -1288,7 +1297,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 <NavIcon>
                 <FiMessageCircle />
                 </NavIcon>
-                {(!isCollapsed || isMobile) && <NavText>{whatsappText}</NavText>}
+                {(!isCollapsed || isMobile) && <NavText $isActive={isActive('/ai-whatsapp')}>{whatsappText}</NavText>}
               </NavItem>
             )}
             {/* Get Fee Details & Plans - Commented out */}
@@ -1322,6 +1331,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
               <NavItem
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
+                $isActive={isActive('/book-call') || isActive('/ai-calling') || isActive('/ai-calling-agent')}
                 onClick={handleCallClick}
                 className={navClass(['/book-call', '/ai-calling', '/ai-calling-agent'])}
                 title={isCollapsed && !isMobile ? callText : ''}
@@ -1329,7 +1339,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 <NavIcon>
                 <FiPhone />
                 </NavIcon>
-                {(!isCollapsed || isMobile) && <NavText>{callText}</NavText>}
+                {(!isCollapsed || isMobile) && <NavText $isActive={isActive('/book-call') || isActive('/ai-calling') || isActive('/ai-calling-agent')}>{callText}</NavText>}
               </NavItem>
             )}
 
@@ -1338,6 +1348,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
               <NavItem
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
+                $isActive={isActive('/schedule-meeting')}
                 onClick={handleCalendlyClick}
                 className={navClass(['/schedule-meeting'])}
                 title={isCollapsed && !isMobile ? calendlyText : ''}
@@ -1345,7 +1356,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 <NavIcon>
                 <FiCalendar />
                 </NavIcon>
-                {(!isCollapsed || isMobile) && <NavText>{calendlyText}</NavText>}
+                {(!isCollapsed || isMobile) && <NavText $isActive={isActive('/schedule-meeting')}>{calendlyText}</NavText>}
               </NavItem>
             )}
 
@@ -1353,6 +1364,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
               <NavItem
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
+                $isActive={isActive('/email-services')}
                 onClick={handleEmailClick}
                 className={navClass(['/email-services'])}
                 title={isCollapsed && !isMobile ? emailText : ''}
@@ -1360,7 +1372,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 <NavIcon>
                 <FiMail />
                 </NavIcon>
-                {(!isCollapsed || isMobile) && <NavText>{emailText}</NavText>}
+                {(!isCollapsed || isMobile) && <NavText $isActive={isActive('/email-services')}>{emailText}</NavText>}
               </NavItem>
             )}
 
@@ -1369,6 +1381,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
               <NavItem
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
+                $isActive={isActive('/whatsapp-proposals')}
                 onClick={handleWhatsAppProposalClick}
                 className={navClass(['/whatsapp-proposals'])}
                 title={isCollapsed && !isMobile ? whatsappProposalText : ''}
@@ -1376,7 +1389,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 <NavIcon>
                   <FaWhatsapp />
                 </NavIcon>
-                {(!isCollapsed || isMobile) && <NavText>{whatsappProposalText}</NavText>}
+                {(!isCollapsed || isMobile) && <NavText $isActive={isActive('/whatsapp-proposals')}>{whatsappProposalText}</NavText>}
               </NavItem>
             )}
 
@@ -1386,6 +1399,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 key={item._id || item.order}
                 $isDarkMode={isDarkMode}
                 $isCollapsed={isCollapsed && !isMobile}
+                $isActive={isActive(item.redirect_url || '')}
                 onClick={() => handleCustomNavClick(item)}
                 className={navClass([item.redirect_url || ''])}
                 title={isCollapsed && !isMobile ? item.display_text : ''}
@@ -1393,7 +1407,7 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                 <NavIcon>
                   {getIconComponent(item.icon_name)}
                 </NavIcon>
-                {(!isCollapsed || isMobile) && <NavText>{item.display_text}</NavText>}
+                {(!isCollapsed || isMobile) && <NavText $isActive={isActive(item.redirect_url || '')}>{item.display_text}</NavText>}
               </NavItem>
             ))}
           </Section>
@@ -1458,17 +1472,13 @@ const Sidebar = ({ isOpen, onClose, onToggle, onSocialMediaClick, onTabNavigatio
                   }}
                 />
               )}
-              {brandingLogoLink ? (
-                <PoweredByLink
-                  href={brandingLogoLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {brandingCompany}
-                </PoweredByLink>
-              ) : (
-                <span>{brandingCompany}</span>
-              )}
+              <PoweredByLink
+                href="https://troikatech.in/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {brandingCompany}
+              </PoweredByLink>
             </PoweredByContainer>
           </CollapsedContent>
         )}
