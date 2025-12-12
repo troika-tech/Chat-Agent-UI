@@ -311,6 +311,13 @@ export function useStreamingChat(options) {
             setError(errorData.message || 'An error occurred during streaming');
             setIsStreaming(false);
 
+            // Check for session ban error
+            if (errorData?.error === 'SESSION_BANNED') {
+              const banMessage = errorData.message || 'Your Session Ban so now you cannot chat for further information';
+              onError?.({ ...errorData, message: banMessage });
+              return;
+            }
+
             // Call error callback
             onError?.(errorData);
           },
@@ -320,15 +327,31 @@ export function useStreamingChat(options) {
             setError(error.message || 'Connection error');
             setIsStreaming(false);
 
-            // Check if it's a credit error even in connection errors
             const errorMessage = error?.message || String(error || '');
+            
+            // Check if it's a session ban error
+            const isSessionBanError = error?.error === 'SESSION_BANNED' || 
+                                     errorMessage.toLowerCase().includes('session ban') ||
+                                     errorMessage.toLowerCase().includes('banned');
+            
+            // Check if it's a credit error
             const isCreditError = errorMessage.toLowerCase().includes('credit') || 
                                  errorMessage.toLowerCase().includes('exhausted');
             
             // Call error callback with proper format
-            onError?.(isCreditError 
-              ? { message: 'Credit Exhausted Please Contact to support team', error: 'CREDITS_EXHAUSTED' }
-              : { message: error.message, code: 'CONNECTION_ERROR' });
+            if (isSessionBanError) {
+              onError?.({ 
+                message: 'Your Session Ban so now you cannot chat for further information', 
+                error: 'SESSION_BANNED' 
+              });
+            } else if (isCreditError) {
+              onError?.({
+                message: 'Credit Exhausted Please Contact to support team', 
+                error: 'CREDITS_EXHAUSTED' 
+              });
+            } else {
+              onError?.({ message: error.message, code: 'CONNECTION_ERROR' });
+            }
           },
         });
       } catch (error) {
@@ -336,14 +359,30 @@ export function useStreamingChat(options) {
         setError(error.message || 'Failed to start streaming');
         setIsStreaming(false);
         
-        // Check if it's a credit error
         const errorMessage = error?.message || String(error || '');
+        
+        // Check if it's a session ban error
+        const isSessionBanError = error?.error === 'SESSION_BANNED' || 
+                                 errorMessage.toLowerCase().includes('session ban') ||
+                                 errorMessage.toLowerCase().includes('banned');
+        
+        // Check if it's a credit error
         const isCreditError = errorMessage.toLowerCase().includes('credit') || 
                              errorMessage.toLowerCase().includes('exhausted');
         
-        onError?.(isCreditError 
-          ? { message: 'Credit Exhausted Please Contact to support team', error: 'CREDITS_EXHAUSTED' }
-          : { message: error.message, code: 'STREAM_START_ERROR' });
+        if (isSessionBanError) {
+          onError?.({ 
+            message: 'Your Session Ban so now you cannot chat for further information', 
+            error: 'SESSION_BANNED' 
+          });
+        } else if (isCreditError) {
+          onError?.({
+            message: 'Credit Exhausted Please Contact to support team', 
+            error: 'CREDITS_EXHAUSTED' 
+          });
+        } else {
+          onError?.({ message: error.message, code: 'STREAM_START_ERROR' });
+        }
       }
     },
     [apiBase, chatbotId, sessionId, phone, name, enableTTS, isMuted, isStreaming, onComplete, onError]
